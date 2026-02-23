@@ -315,24 +315,19 @@ async function connectionUpdate(update) {
         global.connectionMessagesPrinted = {};
         if (!global.isLogoPrinted) {
             const finchevedotuttoviolaviola = [
-    '#00BFFF', '#00CED1', '#20B2AA', '#2ECC71', '#2ECC71', 
-    '#20B2AA', '#00CED1', '#00BFFF'
+    '#00BFFF', '#00CED1', '#20B2AA', '#2ECC71', '#2ECC71', '#20B2AA'
 ];
 
 const nexsusbot = [
-    `  _   _  _______  __  __  ____  _    _  _____   ____   ____ _______ `,
-    ` | \\ | ||  _____| \\ \\/ / / ___|| |  | |/ ____| |  _ \\ / __ \\|__   __|`,
-    ` |  \\| || |__      \\  /  | |___ | |  | | (___   | |_) | |  | |  | |   `,
-    ` | . \` ||  __|     /  \\   \\___ \\| |  | |\\___ \\  |  _ <| |  | |  | |   `,
-    ` | |\\  || |____   / /\\ \\  ____| | |__| |____) | | |_) | |__| |  | |   `,
-    ` |_| \\_||______| /_/  \\_\\|_____/ \\____/|_____/  |____/ \\____/   |_|   `,
-    `                                                                      `,
-    `                   [ NEXSUS SYSTEM • ONLINE ]                         `
+    `⭑⭒━━━✦❘༻ ✨  CONNESSIONE AL SERVER ༺❘✦━━━⭒⭑`,
+    `█▄ █ █▀▀ ▀▄▀ █▀▀ █  █ █▀▀   █▀▄ █▀█ ▀█▀`,
+    `█ ▀█ █▀▀  █  ▄▄█ █▄▄█ ▄▄█   █▀▄ █▄█  █ `,
+    `▀  ▀ ▀▀▀ ▀ ▀ ▀▀▀ ▀  ▀ ▀▀▀   ▀▀  ▀▀▀  ▀ `
 ];
 
 nexsusbot.forEach((line, i) => {
     const color = finchevedotuttoviolaviola[i] || finchevedotuttoviolaviola[finchevedotuttoviolaviola.length - 1];
-    // Applica sia il colore hex che il grassetto (bold)
+    // Il .bold() combinato con i caratteri pieni (█) crea l'effetto "massiccio" che cerchi
     console.log(chalk.hex(color).bold(line));
 });
 
