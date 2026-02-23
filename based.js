@@ -314,25 +314,40 @@ async function connectionUpdate(update) {
         global.qrGenerated = false;
         global.connectionMessagesPrinted = {};
         if (!global.isLogoPrinted) {
-            const finchevedotuttoviolaviola = [
-                '#3b0d95', '#3b0d90', '#3b0d85', '#3b0d80', '#3b0d75',
-                '#3b0d70', '#3b0d65', '#3b0d60', '#3b0d55', '#3b0d50', '#3b0d45'
-            ];
-            const varebot = [
-                ` ██▒   █▓ ▄▄▄       ██▀███  ▓█████  ▄▄▄▄    ▒█████  ▄▄▄█████▓   `,
-                `▓██░   █▒▒████▄    ▓██ ▒ ██▒▓█   ▀ ▓█████▄ ▒██▒  ██▒▓  ██▒ ▓▒   `,
-                ` ▓██  █▒░▒██  ▀█▄  ▓██ ░▄█ ▒▒███   ▒██▒ ▄██▒██░  ██▒▒ ▓██░ ▒░   `,
-                `  ▒██ █░░░██▄▄▄▄██ ▒██▀▀█▄  ▒▓█  ▄ ▒██░█▀  ▒██   ██░░ ▓██▓ ░    `,
-                `   ▒▀█░   ▓█   ▓██▒░██▓ ▒██▒░▒████▒░▓█  ▀█▓░ ████▓▒░  ▒██▒ ░    `,
-                `   ░ ▐░   ▒▒   ▓▒█░░ ▒▓ ░▒▓░░░ ▒░ ░░▒▓███▀▒░ ▒░▒░▒░   ▒ ░░      `,
-                `   ░ ░░    ▒   ▒▒ ░  ░▒ ░ ▒░ ░ ░  ░▒░▒   ░   ░ ▒ ▒░     ░       `,
-                `     ░░    ░   ▒     ░░   ░    ░    ░    ░ ░ ░ ▒░    ░         `,
-                `      ░        ░  ░   ░        ░  ░ ░          ░ ░              `,
-                `     ░                                   ░                      `
-            ];
-            varebot.forEach((line, i) => {
-                const color = finchevedotuttoviolaviola[i] || finchevedotuttoviolaviola[finchevedotuttoviolaviola.length - 1];
-                console.log(chalk.hex(color)(line));
+            const gradientColors = [
+    '#00BFFF',
+    '#00CED1',
+    '#20B2AA',
+    '#2ECC71',
+    '#00BFFF',
+    '#00CED1',
+    '#20B2AA',
+    '#2ECC71'
+];
+
+const nexusbot = [
+`███╗   ██╗███████╗██╗  ██╗███████╗██╗   ██╗███████╗`,
+`████╗  ██║██╔════╝╚██╗██╔╝██╔════╝██║   ██║██╔════╝`,
+`██╔██╗ ██║█████╗   ╚███╔╝ █████╗  ██║   ██║███████╗`,
+`██║╚██╗██║██╔══╝   ██╔██╗ ██╔══╝  ██║   ██║╚════██║`,
+`██║ ╚████║███████╗██╔╝ ██╗███████╗╚██████╔╝███████║`,
+`╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚══════╝`,
+``,
+`        ██████╗  ██████╗ ████████╗`,
+`        ██╔══██╗██╔═══██╗╚══██╔══╝`,
+`        ██████╔╝██║   ██║   ██║   `,
+`        ██╔══██╗██║   ██║   ██║   `,
+`        ██████╔╝╚██████╔╝   ██║   `,
+`        ╚═════╝  ╚═════╝    ╚═╝   `,
+];
+
+nexusbot.forEach((line, i) => {
+    const color = gradientColors[i % gradientColors.length];
+    console.log(chalk.hex(color)(line));
+});
+
+console.log(chalk.hex('#2ECC71').bold('\n✨ 𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓 ONLINE ✨\n'));
+
             });
             global.isLogoPrinted = true;
         }
