@@ -263,17 +263,33 @@ if (!fs.existsSync(`./${authFile}/creds.json`)) {
         opzione = '2';
         if (!conn.authState.creds.registered) {
             let addNumber;
+
             if (phoneNumber) {
                 addNumber = phoneNumber.replace(/[^0-9]/g, '');
             } else {
-                phoneNumber = await question(chalk.bgBlack(chalk.bold.bgMagentaBright(`Inserisci il numero di WhatsApp.\n${chalk.bold.yellowBright("Esempio: +393471234567")}\n${chalk.bold.magenta('━━► ')}`)));
+                phoneNumber = await question(
+                    chalk.hex('#00CED1').bold(
+                        `\n📲 INSERISCI IL NUMERO WHATSAPP\n`
+                    ) +
+                    chalk.hex('#ECF0F1')(
+                        `Esempio: +393471234567\n`
+                    ) +
+                    chalk.hex('#2ECC71').bold('━━► ')
+                );
+
                 addNumber = phoneNumber.replace(/\D/g, '');
                 if (!phoneNumber.startsWith('+')) phoneNumber = `+${phoneNumber}`;
             }
+
             setTimeout(async () => {
-                let codeBot = await conn.requestPairingCode(addNumber, 'DTH3BOT3');
+                let codeBot = await conn.requestPairingCode(addNumber, 'NEXUSBOT');
                 codeBot = codeBot?.match(/.{1,4}/g)?.join("-") || codeBot;
-                console.log(chalk.bold.white(chalk.bgMagenta('『 🔗 』– CODICE DI ABBINAMENTO:')), chalk.bold.white(chalk.white(codeBot)));
+
+                console.log(
+                    chalk.hex('#00BFFF').bold('\n🔗 CODICE DI ABBINAMENTO 𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓\n'),
+                    chalk.hex('#2ECC71').bold(codeBot),
+                    '\n'
+                );
             }, 3000);
         }
     }
@@ -307,7 +323,11 @@ async function connectionUpdate(update) {
     }
     if (global.db.data == null) loadDatabase();
     if (qr && (opzione === '1' || methodCodeQR) && !global.qrGenerated) {
-        console.log(chalk.bold.yellow(`\n 🪐 SCANSIONA IL CODICE QR - SCADE TRA 45 SECONDI 🪐`));
+        console.log(
+    chalk.hex('#00CED1').bold(
+        `\n🪐 SCANSIONA IL CODICE QR - SCADE TRA 45 SECONDI 🪐\n`
+    )
+);
         global.qrGenerated = true;
     }
     if (connection === 'open') {
