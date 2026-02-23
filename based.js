@@ -723,3 +723,4 @@ conn.ev.on('connection.update', async (update) => {
         ripristinaTimer(conn);
     }
 });
+}
