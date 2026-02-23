@@ -5,7 +5,7 @@ import path, { join } from 'path'
 import { unwatchFile, watchFile } from 'fs'
 import chalk from 'chalk'
 import NodeCache from 'node-cache'
-import { getAggregateVotesInPollMessage, toJid } from '@realvare/based'
+import { getAggregateVotesInPollMessage, toJid } from '@realvare/baileys'
 
 global.ignoredUsersGlobal = new Set()
 global.ignoredUsersGroup = {}
