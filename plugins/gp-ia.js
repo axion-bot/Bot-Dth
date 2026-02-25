@@ -11,7 +11,7 @@ const personalityTraits = {
 };
 
 // Crea il prompt di sistema con la personalità e il nome dell'utente
-const createSystemPrompt = (mentionName) => `Sei varebot, un assistente IA creato da sam.
+const createSystemPrompt = (mentionName) => `Sei un assistente IA creato da sam.
 Ecco le tue caratteristiche principali:
 Personalità:
 - Sei molto informale e amichevole
@@ -43,7 +43,7 @@ const formatHistory = (history) => {
     const lastMessages = history.slice(-5);
     return lastMessages.map(msg => {
         const [role, content] = msg.split(': ', 2);
-        return { role: role === 'varebot' ? 'assistant' : 'user', content: content };
+        return { role: role === 'assistant' ? 'assistant' : 'user', content: content };
     });
 };
 
@@ -117,7 +117,7 @@ const formatKeywords = (text) => {
 // Handler principale
 let handler = async (m, { conn, text }) => {
     if (!text?.trim()) {
-        return m.reply(`╭─⟣ *Chat con varebot* ⟢
+        return m.reply(`╭─⟣ *Chat con IA* ⟢
 │ 
 │ ✨ Usa: .ia <messaggio>
 │ 📝 Esempio: .ia raccontami una storia
@@ -140,7 +140,7 @@ let handler = async (m, { conn, text }) => {
             { role: 'user', content: text }
         ];
 
-        const wait = await m.reply('🤔 *fammi pensare...*');
+        const wait = await m.reply('fammi pensare...');
 
         const risposta = await callPollinationsAPI(messages);
 
@@ -149,7 +149,7 @@ let handler = async (m, { conn, text }) => {
         const formattedRisposta = formatKeywords(risposta);
 
         history.push(`${mentionName}: ${text}`);
-        history.push(`varebot: ${formattedRisposta}`);
+        history.push(`assistant: ${formattedRisposta}`);
         chatHistory.set(chatId, history);
 
         await conn.sendMessage(m.chat, {
@@ -160,7 +160,7 @@ let handler = async (m, { conn, text }) => {
 
     } catch (error) {
         console.error('Errore handler:', error);
-        m.reply(`❌ *Errore*\n\n${error.message}`);
+        m.reply(`Errore:\n\n${error.message}`);
     }
 };
 
