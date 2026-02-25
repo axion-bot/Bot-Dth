@@ -1,16 +1,16 @@
 const handler = async (message, { conn, usedPrefix = '.' }) => {
 
     const userCount = Object.keys(global.db?.data?.users || {}).length;
+    const args = message.text.split(' ')[1] || '1';
 
-    const header = `
+    const sezioni = {
+        1: `
 🩸 𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓 *MENU GIOCHI* 🩸
 ════════════════════
 👥 Utenti registrati: *${userCount}*
 ════════════════════
-`.trim();
 
-    const sezione1 = `
-🎮 𝐆𝐀𝐌𝐄 𝐌𝐄𝐓𝐑𝐈𝐂𝐈 & DIVERTIMENTO (1)
+🎮 SEZIONE 1/3
 ➤ ${usedPrefix}bellometro 🥰
 ➤ ${usedPrefix}gaymetro 🌈
 ➤ ${usedPrefix}lesbiometro 💖
@@ -20,6 +20,10 @@ const handler = async (message, { conn, usedPrefix = '.' }) => {
 ➤ ${usedPrefix}sborra 💦
 ➤ ${usedPrefix}il 🤔
 ➤ ${usedPrefix}wasted 🕴🏻
+`.trim(),
+
+        2: `
+🎮 SEZIONE 2/3
 ➤ ${usedPrefix}comunista 💂🏻
 ➤ ${usedPrefix}bisex 👙
 ➤ ${usedPrefix}gay 🏳️‍🌈
@@ -27,12 +31,12 @@ const handler = async (message, { conn, usedPrefix = '.' }) => {
 ➤ ${usedPrefix}trans 🏳️‍⚧️
 ➤ ${usedPrefix}tris ❌⭕
 ➤ ${usedPrefix}meme 🤣
-`.trim();
-
-    const sezione2 = `
-🎮 𝐆𝐀𝐌𝐄 𝐌𝐄𝐓𝐑𝐈𝐂𝐈 & DIVERTIMENTO (2)
-➤ ${usedPrefix}cibo 🍣 
+➤ ${usedPrefix}cibo 🍣
 ➤ ${usedPrefix}bandiera 🚩
+`.trim(),
+
+        3: `
+🎮 SEZIONE 3/3
 ➤ ${usedPrefix}classificabandiera 🏆
 ➤ ${usedPrefix}impiccato 🪢
 ➤ ${usedPrefix}s / sticker 🏷️
@@ -46,16 +50,42 @@ const handler = async (message, { conn, usedPrefix = '.' }) => {
 ➤ ${usedPrefix}toglifiglio 👣
 ➤ ${usedPrefix}togliamante 💔
 ════════════════════
-`.trim();
+`.trim()
+    };
 
-    // Invia messaggi separati
-    await conn.sendMessage(message.chat, { text: header });
-    await conn.sendMessage(message.chat, { text: sezione1 });
-    await conn.sendMessage(message.chat, { text: sezione2 });
+    const sezioneAttuale = parseInt(args);
+    const testo = sezioni[sezioneAttuale];
+
+    if (!testo) return;
+
+    let buttons = [];
+
+    if (sezioneAttuale < 3) {
+        buttons.push({
+            buttonId: `${usedPrefix}giochi ${sezioneAttuale + 1}`,
+            buttonText: { displayText: "➡️ Prossima Sezione" },
+            type: 1
+        });
+    }
+
+    if (sezioneAttuale > 1) {
+        buttons.push({
+            buttonId: `${usedPrefix}giochi ${sezioneAttuale - 1}`,
+            buttonText: { displayText: "⬅️ Sezione Precedente" },
+            type: 1
+        });
+    }
+
+    await conn.sendMessage(message.chat, {
+        text: testo,
+        footer: "MENU GIOCHI",
+        buttons: buttons,
+        headerType: 1
+    });
 };
 
-handler.help = ['menugiochi'];
+handler.help = ['menugiochi', 'giochi'];
 handler.tags = ['menu'];
-handler.command = /^(menugiochi|giochi)$/i;
+handler.command = /^(menugiochi|giochi)(\s\d+)?$/i;
 
 export default handler;
