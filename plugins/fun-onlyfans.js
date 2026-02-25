@@ -1,4 +1,4 @@
-import { createCanvas } from 'canvas'
+import { createCanvas, loadImage } from 'canvas'
 
 const handler = async (m, { conn, args, usedPrefix }) => {
 
@@ -20,6 +20,7 @@ const handler = async (m, { conn, args, usedPrefix }) => {
   const followers = random(1000, 900000)
   const post = random(5, 350)
   const likes = random(10000, 900000)
+  const verified = Math.random() < 0.4 // 40% verificato
 
   const bioList = [
     "🔥 Contenuti esclusivi ogni giorno",
@@ -32,8 +33,18 @@ const handler = async (m, { conn, args, usedPrefix }) => {
 
   const bio = bioList[Math.floor(Math.random() * bioList.length)]
 
-  // CANVAS
-  const canvas = createCanvas(800, 1000)
+  // Ottieni foto profilo WhatsApp
+  let avatarUrl
+  try {
+    avatarUrl = await conn.profilePictureUrl(m.sender, 'image')
+  } catch {
+    avatarUrl = 'https://i.imgur.com/8Km9tLL.png'
+  }
+
+  const avatar = await loadImage(avatarUrl)
+
+  // Canvas
+  const canvas = createCanvas(900, 1100)
   const ctx = canvas.getContext('2d')
 
   // Background
@@ -42,47 +53,62 @@ const handler = async (m, { conn, args, usedPrefix }) => {
 
   // Header
   ctx.fillStyle = '#00aff0'
-  ctx.fillRect(0, 0, canvas.width, 120)
+  ctx.fillRect(0, 0, canvas.width, 140)
 
   ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 40px Sans'
-  ctx.fillText('ONLYFANS', 280, 75)
-
-  // Avatar
-  ctx.beginPath()
-  ctx.arc(400, 250, 120, 0, Math.PI * 2)
-  ctx.fillStyle = '#1c1c25'
-  ctx.fill()
-
-  ctx.fillStyle = '#ffffff'
+  ctx.font = 'bold 50px Sans'
   ctx.textAlign = 'center'
-  ctx.font = 'bold 30px Sans'
-  ctx.fillText(nome, 400, 430)
+  ctx.fillText('ONLYFANS', 450, 90)
+
+  // Avatar circolare
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(450, 300, 140, 0, Math.PI * 2)
+  ctx.closePath()
+  ctx.clip()
+  ctx.drawImage(avatar, 310, 160, 280, 280)
+  ctx.restore()
+
+  // Nome
+  ctx.fillStyle = '#ffffff'
+  ctx.font = 'bold 38px Sans'
+  ctx.fillText(nome, 450, 480)
+
+  // Badge verificato
+  if (verified) {
+    ctx.fillStyle = '#00aff0'
+    ctx.beginPath()
+    ctx.arc(650, 465, 15, 0, Math.PI * 2)
+    ctx.fill()
+  }
 
   ctx.font = '24px Sans'
-  ctx.fillText(`ID: OF${id}`, 400, 470)
-
-  ctx.fillText(`💰 ${prezzo}€ / mese`, 400, 520)
-  ctx.fillText(`👥 ${followers.toLocaleString()} followers`, 400, 560)
-  ctx.fillText(`📸 ${post} post`, 400, 600)
-  ctx.fillText(`🔥 ${likes.toLocaleString()} like`, 400, 640)
-
-  ctx.font = '22px Sans'
-  ctx.fillStyle = '#bbbbbb'
-  ctx.fillText(bio, 400, 720)
-
-  ctx.fillStyle = '#00aff0'
-  ctx.fillRect(250, 800, 300, 70)
+  ctx.fillStyle = '#cccccc'
+  ctx.fillText(`ID: OF${id}`, 450, 520)
 
   ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 28px Sans'
-  ctx.fillText('ABBONATI ORA', 400, 845)
+  ctx.fillText(`💰 ${prezzo}€ / mese`, 450, 570)
+  ctx.fillText(`👥 ${followers.toLocaleString()} followers`, 450, 610)
+  ctx.fillText(`📸 ${post} post`, 450, 650)
+  ctx.fillText(`🔥 ${likes.toLocaleString()} like`, 450, 690)
+
+  ctx.font = '22px Sans'
+  ctx.fillStyle = '#aaaaaa'
+  ctx.fillText(bio, 450, 760)
+
+  // Bottone
+  ctx.fillStyle = '#00aff0'
+  ctx.fillRect(300, 900, 300, 80)
+
+  ctx.fillStyle = '#ffffff'
+  ctx.font = 'bold 30px Sans'
+  ctx.fillText('ABBONATI ORA', 450, 950)
 
   const buffer = canvas.toBuffer()
 
   await conn.sendMessage(m.chat, {
     image: buffer,
-    caption: `🔞 Profilo simulato creato per ${nome}`
+    caption: `🔞 Profilo onlyfans di ${nome}`
   })
 }
 
