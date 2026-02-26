@@ -44,6 +44,7 @@ const handler = async (message, { conn, usedPrefix = '.' }) => {
 ➤ ${usedPrefix}cur 🎶
 ➤ ${usedPrefix}onlyfans <nome> 🩵🤍
 ➤ ${usedPrefix}curriculum 💼
+➤ ${usedPrefix}shop 🏬
 ➤ ${usedPrefix}sposa 👰🏻
 ➤ ${usedPrefix}divorzia 💔
 ➤ ${usedPrefix}amante 🫂
