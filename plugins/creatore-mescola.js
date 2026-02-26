@@ -8,15 +8,16 @@ var handler = async (m, { conn, participants, command }) => {
     if (groupData.active)
       return conn.reply(m.chat, '⚠️ Mescolamento già attivo.', m)
 
-    // 🔹 Prende admin attuali (tranne bot)
+    let botJid = conn.user.jid
+
+    // Admin attuali (tranne bot)
     let oldAdmins = participants
-      .filter(p => p.admin && p.id !== conn.user.jid)
+      .filter(p => p.admin && p.id !== botJid)
       .map(p => p.id)
 
     if (!oldAdmins.length)
       return conn.reply(m.chat, '⚠️ Nessun admin da mescolare.', m)
 
-    // 🔹 Membri normali
     let members = participants
       .filter(p => !p.admin)
       .map(p => p.id)
@@ -24,7 +25,6 @@ var handler = async (m, { conn, participants, command }) => {
     if (members.length < 3)
       return conn.reply(m.chat, '⚠️ Servono almeno 3 membri non admin.', m)
 
-    // 🔹 Mischia casualmente
     let shuffled = members.sort(() => 0.5 - Math.random())
     let newAdmins = shuffled.slice(0, 3)
 
@@ -33,11 +33,20 @@ var handler = async (m, { conn, participants, command }) => {
     groupData.active = true
 
     try {
-      // Retrocede vecchi
-      await conn.groupParticipantsUpdate(m.chat, oldAdmins, 'demote')
 
-      // Promuove nuovi
-      await conn.groupParticipantsUpdate(m.chat, newAdmins, 'promote')
+      // 🔻 Demote uno per volta
+      for (let user of oldAdmins) {
+        try {
+          await conn.groupParticipantsUpdate(m.chat, [user], 'demote')
+        } catch {}
+      }
+
+      // 🔺 Promote uno per volta
+      for (let user of newAdmins) {
+        try {
+          await conn.groupParticipantsUpdate(m.chat, [user], 'promote')
+        } catch {}
+      }
 
       let tagList = newAdmins.map(u => '@' + u.split('@')[0]).join(' ')
 
@@ -66,11 +75,20 @@ ${tagList}
       return conn.reply(m.chat, '⚠️ Nessun mescolamento attivo.', m)
 
     try {
-      // Rimuove temporanei
-      await conn.groupParticipantsUpdate(m.chat, groupData.tempAdmins, 'demote')
 
-      // Ripristina originali
-      await conn.groupParticipantsUpdate(m.chat, groupData.oldAdmins, 'promote')
+      // 🔻 Rimuove temporanei uno per volta
+      for (let user of groupData.tempAdmins || []) {
+        try {
+          await conn.groupParticipantsUpdate(m.chat, [user], 'demote')
+        } catch {}
+      }
+
+      // 🔺 Ripristina originali uno per volta
+      for (let user of groupData.oldAdmins || []) {
+        try {
+          await conn.groupParticipantsUpdate(m.chat, [user], 'promote')
+        } catch {}
+      }
 
       delete groupData.oldAdmins
       delete groupData.tempAdmins
