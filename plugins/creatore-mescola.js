@@ -1,39 +1,48 @@
 const handler = async (m, { conn, participants, command }) => {
-  if (!m.isGroup)
-    return m.reply('⚠️ Solo nei gruppi.');
+  if (!m.isGroup) return m.reply('⚠️ Solo nei gruppi.');
 
-  if (!m.isBotAdmin)
-    return m.reply('⚠️ Il bot deve essere admin.');
-
-  // 🔥 OWNER AUTOMATICI DA global.owner
+  // 🔥 OWNER AUTOMATICI
   const BOT_OWNERS = (global.owner || []).map(o =>
     o[0].replace(/[^0-9]/g, '') + '@s.whatsapp.net'
   );
 
-  const sender = m.sender;
-
-  if (!BOT_OWNERS.includes(sender))
+  if (!BOT_OWNERS.includes(m.sender))
     return m.reply('🚫 Solo l’OWNER del bot può usare questo comando.');
+
+  // 🔥 Controllo BOT ADMIN sicuro
+  const botJid = conn.user.id.split(':')[0] + '@s.whatsapp.net';
+  const botIsAdmin = participants.find(p => p.id === botJid)?.admin;
+
+  if (!botIsAdmin)
+    return m.reply('⚠️ Il bot deve essere admin nel gruppo.');
 
   global.db.data.groups = global.db.data.groups || {};
   let groupData = global.db.data.groups[m.chat] || (global.db.data.groups[m.chat] = {});
 
+  // 🔥 Prende founder automaticamente
+  let founderJid = null;
+  try {
+    const metadata = await conn.groupMetadata(m.chat);
+    founderJid = metadata.owner;
+  } catch {}
+
   if (command === 'mescoladmin') {
 
-    if (groupData.oldAdmins)
+    if (groupData.shuffleActive)
       return m.reply('⚠️ Mescolamento già attivo.');
 
-    // Admin attuali (tranne bot e owner)
+    // Admin attuali (escludi bot, owner e founder)
     const oldAdmins = participants
       .filter(p =>
         p.admin &&
-        p.id !== conn.user.jid &&
-        !BOT_OWNERS.includes(p.id)
+        p.id !== botJid &&
+        !BOT_OWNERS.includes(p.id) &&
+        p.id !== founderJid
       )
       .map(p => p.id);
 
     if (!oldAdmins.length)
-      return m.reply('⚠️ Nessun admin da mescolare.');
+      return m.reply('⚠️ Nessun admin valido da mescolare.');
 
     // Membri normali
     const members = participants
@@ -49,49 +58,68 @@ const handler = async (m, { conn, participants, command }) => {
 
     groupData.oldAdmins = oldAdmins;
     groupData.tempAdmins = newAdmins;
+    groupData.shuffleActive = true;
 
-    // Demote vecchi admin
+    // 🔻 Demote vecchi admin
     for (let user of oldAdmins) {
-      await conn.groupParticipantsUpdate(m.chat, [user], 'demote');
+      try {
+        await conn.groupParticipantsUpdate(m.chat, [user], 'demote');
+      } catch {}
     }
 
-    // Promote nuovi admin
+    // 🔺 Promote nuovi admin
     for (let user of newAdmins) {
-      await conn.groupParticipantsUpdate(m.chat, [user], 'promote');
+      try {
+        await conn.groupParticipantsUpdate(m.chat, [user], 'promote');
+      } catch {}
     }
 
     return conn.sendMessage(m.chat, {
-      text: `🎲 *ADMIN MESCOLATI!*\n\n👑 Nuovi admin temporanei:\n${newAdmins.map(u => '@' + u.split('@')[0]).join('\n')}\n\n⏳ Fino a ripristino manuale.`,
+      text:
+`🎲 *ADMIN MESCOLATI!*
+
+👑 Nuovi admin temporanei:
+${newAdmins.map(u => '@' + u.split('@')[0]).join('\n')}
+
+⏳ Fino a ripristino manuale.`,
       mentions: newAdmins
     }, { quoted: m });
   }
 
-  if (command === 'ripristinadmin') {
+  if (command === 'ripristinaadmin') {
 
-    if (!groupData.oldAdmins || !groupData.tempAdmins)
+    if (!groupData.shuffleActive)
       return m.reply('⚠️ Nessun mescolamento attivo.');
 
-    // Rimuove temporanei
-    for (let user of groupData.tempAdmins) {
-      await conn.groupParticipantsUpdate(m.chat, [user], 'demote');
+    // 🔻 Rimuove admin temporanei
+    for (let user of groupData.tempAdmins || []) {
+      try {
+        await conn.groupParticipantsUpdate(m.chat, [user], 'demote');
+      } catch {}
     }
 
-    // Ripristina originali
-    for (let user of groupData.oldAdmins) {
-      await conn.groupParticipantsUpdate(m.chat, [user], 'promote');
+    // 🔺 Ripristina admin originali (solo se ancora nel gruppo)
+    const currentMembers = participants.map(p => p.id);
+
+    for (let user of groupData.oldAdmins || []) {
+      if (currentMembers.includes(user)) {
+        try {
+          await conn.groupParticipantsUpdate(m.chat, [user], 'promote');
+        } catch {}
+      }
     }
 
     delete groupData.oldAdmins;
     delete groupData.tempAdmins;
+    delete groupData.shuffleActive;
 
-    return m.reply('✅ Admin originali ripristinati.');
+    return m.reply('✅ Admin originali ripristinati con successo.');
   }
 };
 
 handler.help = ['mescoladmin', 'ripristinaadmin'];
 handler.tags = ['group'];
-handler.command = ['mescoladmin', 'ripristinadmin'];
+handler.command = ['mescoladmin', 'ripristinaadmin'];
 handler.group = true;
-handler.botAdmin = true;
 
 export default handler;
