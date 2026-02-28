@@ -1,4 +1,5 @@
 import { WAMessageStubType } from '@realvare/baileys'
+import axios from 'axios'
 
 export async function before(m, { conn, groupMetadata }) {
     if (!m.isGroup || !m.messageStubType) return true
@@ -30,28 +31,33 @@ export async function before(m, { conn, groupMetadata }) {
         ? `𝐌𝐢 𝐬𝐚 𝐜𝐡𝐞 @${cleanUserId} 𝐡𝐚 𝐪𝐮𝐢𝐭𝐭𝐚𝐭𝐨`
         : `@${cleanUserId} 𝐁𝐞𝐧𝐯𝐞𝐧𝐮𝐭𝐨 𝐬𝐮 ${groupName}`
 
-    // ==========================
-    // CONTROLLA FOTO PROFILO
-    // ==========================
     let pp = null
+    let thumbBuffer = null
+
     try {
         pp = await conn.profilePictureUrl(jid, 'image')
+        const response = await axios.get(pp, { responseType: 'arraybuffer' })
+        thumbBuffer = response.data
     } catch {
         pp = null
     }
 
-    // ==========================
-    // INVIO
-    // ==========================
-    if (pp) {
-        // Con thumbnail
+    if (thumbBuffer) {
         await conn.sendMessage(m.chat, {
-            image: { url: pp },
-            caption,
-            mentions: [jid]
+            text: caption,
+            mentions: [jid],
+            contextInfo: {
+                externalAdReply: {
+                    title: isWelcome ? "Nuovo Membro" : "Uscita dal Gruppo",
+                    body: groupName,
+                    thumbnail: thumbBuffer,
+                    mediaType: 1,
+                    renderLargerThumbnail: false,
+                    showAdAttribution: false
+                }
+            }
         })
     } else {
-        // Solo testo
         await conn.sendMessage(m.chat, {
             text: caption,
             mentions: [jid]
