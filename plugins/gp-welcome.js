@@ -102,8 +102,8 @@ async function getGroupBackgroundImage(groupJid, conn) {
     return buffer;
 }
 
-const WelcomeCard = ({ backgroundUrl, pfpUrl, isGoodbye, username, groupName }) => {
-    const safeUsername = username?.replace(/</g,"&lt;").replace(/>/g,"&gt;")||'Utente';
+const WelcomeCard = ({ backgroundUrl, pfpUrl, isGoodbye, displayName, groupName }) => {
+    const safeUsername = displayName?.replace(/</g,"&lt;").replace(/>/g,"&gt;")||'Utente';
     const safeGroupName = groupName?.replace(/</g,"&lt;").replace(/>/g,"&gt;")||'Gruppo';
 
     const sparkles = Array.from({ length:200 }).map(()=> {
@@ -177,30 +177,37 @@ handler.before = async function(m, { conn, groupMetadata }) {
     const who = m.messageStubParameters?.[0];
     if(!who) return false;
     const jid = conn.decodeJid(who);
-    const username = `@${jid.split('@')[0]}`;
-    const groupName = groupMetadata?.subject || 'Gruppo';
 
     const profilePic = await getUserProfilePic(conn,jid);
     const background = await getGroupBackgroundImage(m.chat,conn);
     const toBase64 = buffer => `data:image/jpeg;base64,${buffer.toString('base64')}`;
 
+    // Nome reale per thumbnail
+    const displayName = (groupMetadata?.participants.find(u=>u.id===jid)?.name) || `@${jid.split('@')[0]}`;
+    const cleanUserId = jid.split('@')[0];
+    const groupName = groupMetadata?.subject || 'Gruppo';
+
     const element = React.createElement(WelcomeCard,{
         backgroundUrl: toBase64(background),
         pfpUrl: toBase64(profilePic),
         isGoodbye:isRemove,
-        username,
+        displayName,
         groupName
     });
 
     const html = `<!DOCTYPE html>${ReactDOMServer.renderToStaticMarkup(element)}`;
 
+    const caption = isRemove 
+        ? `𝐌𝐢 𝐬𝐚 𝐜𝐡𝐞 @${cleanUserId} 𝐡𝐚 𝐪𝐮𝐢𝐭𝐭𝐚𝐭𝐨`
+        : `@${cleanUserId} 𝐁𝐞𝐧𝐯𝐞𝐧𝐮𝐭𝐨 𝐬𝐮 ${groupName}`;
+
     try {
         const image = await createImage(html);
         await conn.sendMessage(m.chat, {
-            text: ' ',
+            text: caption,
             contextInfo: {
                 externalAdReply: {
-                    title: isRemove ? `Addio ${username}` : `Benvenuto ${username}`,
+                    title: displayName,
                     body: '',
                     previewType: 'PHOTO',
                     thumbnail: image,
@@ -211,10 +218,7 @@ handler.before = async function(m, { conn, groupMetadata }) {
         }, { quoted: m });
     } catch(err) {
         console.error('❌ Errore invio card con thumbnail:', err.message);
-        await conn.sendMessage(m.chat, {
-            text: isRemove ? `Addio ${username}` : `Benvenuto ${username}`,
-            mentions: [jid]
-        }, { quoted: m });
+        await conn.sendMessage(m.chat, { text: caption, mentions: [jid] }, { quoted: m });
     }
 
     return true;
