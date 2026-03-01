@@ -9,23 +9,22 @@ var handler = async (m, { conn, isBotAdmin, isAdmin }) => {
 
   try {
     // 1. APRE IL GRUPPO (Disattiva approvazione)
-    await conn.groupUpdateMembershipApprovalMode(m.chat, 'off')
+    // Usiamo il metodo universale 'membership_approval_mode'
+    await conn.groupUpdateSetting(m.chat, 'membership_approval_mode', 'off')
     
-    // Notifica veloce
     await conn.sendMessage(m.chat, { text: '🔓 *ACCESSO LIBERO* (2s)' }, { quoted: m })
 
     // 2. ATTENDE 2 SECONDI
     await delay(2000)
 
     // 3. CHIUDE IL GRUPPO (Riattiva approvazione)
-    await conn.groupUpdateMembershipApprovalMode(m.chat, 'on')
+    await conn.groupUpdateSetting(m.chat, 'membership_approval_mode', 'on')
     
-    // Notifica di chiusura
     await conn.sendMessage(m.chat, { text: '🔒 *ACCESSO CHIUSO*' }, { quoted: m })
 
   } catch (e) {
-    console.error(e)
-    m.reply('❌ Errore: Assicurati che l\'approvazione sia supportata in questo gruppo.')
+    console.error("ERRORE_APPROVAZIONE:", e)
+    m.reply('❌ Il comando è corretto ma il gruppo non sembra supportare l\'approvazione membri (controlla le impostazioni manuali).')
   }
 }
 
