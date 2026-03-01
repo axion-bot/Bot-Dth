@@ -24,7 +24,7 @@ var handler = async (m, { conn, isBotAdmin, isAdmin }) => {
     })
     
     // Unico messaggio di avviso
-    await conn.sendMessage(m.chat, { text: '🔓 *ACCESSO LIBERO* (2s)' }, { quoted: m })
+    await conn.sendMessage(m.chat, { text: '✅ Tutte le richieste sono state accettate.' }, { quoted: m })
 
     // 2. ATTENDE 2 SECONDI
     await delay(2000)
