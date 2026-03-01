@@ -1,107 +1,110 @@
 import fetch from 'node-fetch'
 
-const time = async (ms) => new Promise(resolve => setTimeout(resolve, ms))
+const delay = ms => new Promise(res => setTimeout(res, ms))
 
-// thumbnail (fetch FIX)
+// anti doppio trigger
+const warnCooldown = new Set()
+
 const getThumb = async () =>
   Buffer.from(await (await fetch('https://qu.ax/fmHdc.png')).arrayBuffer())
 
 let handler = async (m, { conn, text, command }) => {
 
-  // ================= UTENTE =================
-  let who
-  if (m.isGroup)
-    who = m.mentionedJid?.[0] || m.quoted?.sender || null
-  else who = m.chat
+  if (!m.isGroup) return
 
-  if (!who) return
+  let who = m.mentionedJid?.[0] || m.quoted?.sender
+  if (!who) return m.reply('⚠️ Tagga o rispondi a un utente.')
 
   if (!global.db.data.users[who]) {
     global.db.data.users[who] = { warn: 0 }
   }
 
   let user = global.db.data.users[who]
+  const maxWarn = 3
 
-  // ================= WARN =================
+  /* ================= WARN ================= */
   if (['warn', 'ammonisci'].includes(command)) {
-    const maxWarn = 3
 
-    const prova = {
-      key: { participants: '0@s.whatsapp.net', fromMe: false, id: 'Halo' },
-      message: {
-        locationMessage: {
-          name: '⚠️ 𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓 ⚠️',
-          jpegThumbnail: await getThumb(),
-          vcard: `BEGIN:VCARD
-VERSION:3.0
-N:Sy;Bot;;;
-FN:y
-item1.TEL;waid=${m.sender.split('@')[0]}:${m.sender.split('@')[0]}
-item1.X-ABLabel:Ponsel
-END:VCARD`
-        }
-      },
-      participant: '0@s.whatsapp.net'
-    }
+    // 🔒 blocca doppia esecuzione
+    if (warnCooldown.has(who)) return
+    warnCooldown.add(who)
+    setTimeout(() => warnCooldown.delete(who), 2000)
 
-    const reason = text ? `❓ » ${text.replace(m.sender, '')}` : ''
+    const reason = text ? `\n❓ Motivo: ${text}` : ''
 
-    if (user.warn < maxWarn - 1) {
-      user.warn++
-      await conn.reply(
+    user.warn = Math.min(user.warn + 1, maxWarn)
+
+    if (user.warn < maxWarn) {
+      await conn.sendMessage(
         m.chat,
-        `👤 @${who.split('@')[0]}\n⚠️ WARN: *${user.warn}/${maxWarn}*\n${reason}`,
-        prova,
-        { mentions: [who] }
+        {
+          text: `👤 @${who.split('@')[0]}\n⚠️ WARN: *${user.warn}/${maxWarn}*${reason}`,
+          mentions: [who]
+        },
+        { quoted: m }
       )
     } else {
-      user.warn = 0
-      await conn.reply(
+      await conn.sendMessage(
         m.chat,
-        `💀 @${who.split('@')[0]} rimosso dopo 3 warn!`,
-        prova,
-        { mentions: [who] }
+        {
+          text: `💀 @${who.split('@')[0]} ha raggiunto ${maxWarn} warn ed è stato rimosso!`,
+          mentions: [who]
+        },
+        { quoted: m }
       )
-      await time(1000)
+
+      user.warn = 0
+      await delay(1000)
       await conn.groupParticipantsUpdate(m.chat, [who], 'remove')
     }
   }
 
-  // ================= UNWARN =================
+  /* ================= UNWARN ================= */
   if (['unwarn', 'delwarn'].includes(command)) {
-    if (user.warn > 0) {
-      user.warn--
-      await conn.reply(
-        m.chat,
-        `👤 @${who.split('@')[0]}\n⚠️ WARN: *${user.warn}/3*`,
-        m,
-        { mentions: [who] }
-      )
-    } else {
-      m.reply('ℹ️ L’utente non ha warn attivi.')
-    }
-  }
 
-  // ================= RESETWARN =================
-  if (command === 'resetwarn') {
-    if (user.warn === 0) return m.reply('ℹ️ L’utente non ha warn da resettare.')
-    user.warn = 0
-    await conn.reply(
+    if (user.warn <= 0)
+      return m.reply('ℹ️ L’utente non ha warn attivi.')
+
+    user.warn--
+
+    await conn.sendMessage(
       m.chat,
-      `✅ Tutti i warn di @${who.split('@')[0]} sono stati resettati`,
-      m,
-      { mentions: [who] }
+      {
+        text: `👤 @${who.split('@')[0]}\n⚠️ WARN: *${user.warn}/${maxWarn}*`,
+        mentions: [who]
+      },
+      { quoted: m }
     )
   }
 
-  // ================= LISTWARN =================
-  if (command === 'listwarn') {
-    const maxWarn = 3
-    await conn.reply(
+  /* ================= RESETWARN ================= */
+  if (command === 'resetwarn') {
+
+    if (user.warn === 0)
+      return m.reply('ℹ️ L’utente non ha warn da resettare.')
+
+    user.warn = 0
+
+    await conn.sendMessage(
       m.chat,
-      `📜 Lista warn utente @${who.split('@')[0]}:\n⚠️ ${user.warn} / ${maxWarn}`,
-      m,
-      { mentions: [who] }
+      {
+        text: `✅ Tutti i warn di @${who.split('@')[0]} sono stati resettati`,
+        mentions: [who]
+      },
+      { quoted: m }
+    )
+  }
+
+  /* ================= LISTWARN ================= */
+  if (command === 'listwarn') {
+
+    await conn.sendMessage(
+      m.chat,
+      {
+        text: `📜 Warn di @${who.split('@')[0]}:\n⚠️ ${user.warn}/${maxWarn}`,
+        mentions: [who]
+      },
+      { quoted: m }
     )
   }
 }
