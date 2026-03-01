@@ -1,47 +1,31 @@
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 var handler = async (m, { conn, isBotAdmin, isAdmin }) => {
-  if (!isAdmin) return m.reply('⚠️ Solo gli admin possono usare questo comando.')
-  if (!isBotAdmin) return m.reply('⚠️ Il bot deve essere admin per cambiare le impostazioni.')
+  // Solo per admin del gruppo
+  if (!isAdmin) return 
+  
+  // Il bot deve essere admin
+  if (!isBotAdmin) return m.reply('⚠️ Il bot deve essere admin.')
 
   try {
-    // Prova il metodo standard di Baileys
+    // 1. APRE IL GRUPPO (Disattiva approvazione)
     await conn.groupUpdateMembershipApprovalMode(m.chat, 'off')
     
-    await conn.reply(m.chat, '🔓 *Approvazione DISATTIVATA*\nEntrata libera per 5 secondi...', m)
+    // Notifica veloce
+    await conn.sendMessage(m.chat, { text: '🔓 *ACCESSO LIBERO* (2s)' }, { quoted: m })
 
-    // Aumentiamo a 5 secondi per dare tempo al server di elaborare
-    await delay(5000)
+    // 2. ATTENDE 2 SECONDI
+    await delay(2000)
 
+    // 3. CHIUDE IL GRUPPO (Riattiva approvazione)
     await conn.groupUpdateMembershipApprovalMode(m.chat, 'on')
     
-    await conn.reply(m.chat, '🔒 *Approvazione RIATTIVATA*\nIl gruppo è di nuovo protetto.', m)
+    // Notifica di chiusura
+    await conn.sendMessage(m.chat, { text: '🔒 *ACCESSO CHIUSO*' }, { quoted: m })
 
   } catch (e) {
-    console.error("ERRORE_APPROVAZIONE:", e)
-    
-    // Tentativo alternativo se il primo fallisce
-    try {
-        await conn.query({
-            tag: 'iq',
-            attrs: {
-                to: m.chat,
-                type: 'set',
-                xmlns: 'w:g2',
-            },
-            content: [{
-                tag: 'membership_approval_mode',
-                attrs: {},
-                content: [{
-                    tag: 'group_join',
-                    attrs: { state: 'off' } // Prova a forzare lo stato
-                }]
-            }]
-        })
-        m.reply('⚠️ Metodo alternativo inviato, ma controlla se le impostazioni sono cambiate.')
-    } catch (e2) {
-        m.reply('❌ Errore critico: WhatsApp ha rifiutato il comando. Assicurati che l\'opzione "Approva nuovi partecipanti" sia visibile manualmente nelle info del gruppo.')
-    }
+    console.error(e)
+    m.reply('❌ Errore: Assicurati che l\'approvazione sia supportata in questo gruppo.')
   }
 }
 
