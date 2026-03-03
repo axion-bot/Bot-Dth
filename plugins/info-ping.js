@@ -84,7 +84,7 @@ async function getRealPing(conn) {
     const t0 = Date.now();
     await new Promise((resolve) => setImmediate(resolve));
     const ms = Date.now() - t0;
-    return `${ms} (local)`;
+    return `${ms}`;
   } catch {
     return "Errore";
   }
