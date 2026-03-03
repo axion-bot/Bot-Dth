@@ -3,39 +3,47 @@ const handler = async (m, { conn, args, usedPrefix, command }) => {
     return m.reply('⚠️ La roulette si gioca solo nei gruppi!');
   }
 
-  // Verifica che l'utente sia admin
-  let isAdmin = m.isAdmin || false;
-  if (!isAdmin) {
+  // Verifica che chi usa il comando sia admin
+  const groupMetadata = await conn.groupMetadata(m.chat);
+  const sender = m.sender;
+  
+  const isSenderAdmin = groupMetadata.participants.find(p => p.id === sender)?.admin;
+  
+  if (!isSenderAdmin) {
     return m.reply('❌ Solo gli amministratori possono giocare alla roulette!');
   }
 
+  // Verifica che il bot sia admin
+  const botNumber = conn.user.id.split(':')[0] + '@s.whatsapp.net';
+  const isBotAdmin = groupMetadata.participants.find(p => p.id === botNumber)?.admin;
+  
+  if (!isBotAdmin) {
+    return m.reply('🤖 Il bot non è amministratore! Promuovimi prima.');
+  }
+
   // Prendi tutti i partecipanti del gruppo
-  const groupMetadata = await conn.groupMetadata(m.chat);
   const participants = groupMetadata.participants;
   
-  // Filtra solo utenti normali (non admin, non bot stesso)
-  const botNumber = conn.user.id.split(':')[0] + '@s.whatsapp.net';
-  
+  // Filtra: solo utenti normali (non admin, non bot stesso)
   const eligibleUsers = participants.filter(p => {
     return !p.admin && // Non admin
-           p.id !== botNumber && // Non il bot
-           p.id !== m.sender; // Non chi esegue il comando (per sicurezza)
+           p.id !== botNumber; // Non il bot
   });
 
   if (eligibleUsers.length === 0) {
-    return m.reply('🎯 Non ci sono utenti rimovibili nel gruppo!');
+    return m.reply('🎯 Non ci sono utenti non-admin nel gruppo!');
   }
 
   // Scegli una vittima casuale
   const randomVictim = eligibleUsers[Math.floor(Math.random() * eligibleUsers.length)];
   const victimNumber = randomVictim.id.split('@')[0];
+  const adminNumber = m.sender.split('@')[0];
 
   // Genera percentuale di "fortuna"
   const luckPercent = Math.floor(Math.random() * 101);
   
-  // Messaggi diversi in base al comando
+  // Comando ROULETTE (con colpo di scena)
   if (command === 'rouletteban' || command === 'roulette') {
-    // Roulotte russa con colpi di scena
     const messages = [
       "🎯 *ROULETTE RUSSA* 🎯",
       "🔫 *GIOCO PERICOLOSO* 🔫",
@@ -50,18 +58,20 @@ const handler = async (m, { conn, args, usedPrefix, command }) => {
    ${randomTitle}
 ╚══════════════════════╝
 
-🔄 *Caricamento del tamburo...*
-👥 *Giocatori in gioco:* ${eligibleUsers.length}
+🎰 *L'admin @${adminNumber} carica il tamburo...*
+
+🔄 *Giocatori in gioco:* ${eligibleUsers.length}
+👑 *Admin che gioca:* @${adminNumber}
 
 ${createLoadingBar(luckPercent, 12)}
 
-📊 *Probabilità di sopravvivenza:* ${100 - luckPercent}%
+📊 *Probabilità per la vittima:* ${luckPercent}%
     `;
 
     const sentMsg = await conn.sendMessage(m.chat, { 
       text: initialMsg,
+      mentions: [m.sender, randomVictim.id],
       contextInfo: {
-        mentionedJid: [m.sender],
         externalAdReply: {
           title: '🎲 ROULETTE RUSSA',
           body: 'Il destino sta per decidere...',
@@ -77,47 +87,51 @@ ${createLoadingBar(luckPercent, 12)}
     if (luckPercent > 50) {
       // Vittima colpita
       await conn.sendMessage(m.chat, { 
-        text: `💥 *BANG!* 💥\n\nLa pallottola ha colpito @${victimNumber}\n\n💀 *ELIMINATO DAL GRUPPO* 💀`,
-        mentions: [randomVictim.id]
+        text: `💥 *BANG!* 💥\n\nLa pallottola ha colpito @${victimNumber}\n\n💀 *ELIMINATO DAL GRUPPO* 💀\n\n👑 *Admin killer:* @${adminNumber}`,
+        mentions: [randomVictim.id, m.sender]
       }, { quoted: sentMsg });
       
       await new Promise(resolve => setTimeout(resolve, 1500));
       await conn.groupParticipantsUpdate(m.chat, [randomVictim.id], 'remove');
+      
     } else {
       // Colpo a salve
       await conn.sendMessage(m.chat, { 
-        text: `😮‍💨 *CLICK!* 😮‍💨\n\n*COLPO A SALVE!*\n\n@${victimNumber} è stato fortunato... questa volta!`,
-        mentions: [randomVictim.id]
+        text: `😮‍💨 *CLICK!* 😮‍💨\n\n*COLPO A SALVE!*\n\n@${victimNumber} è stato fortunato! @${adminNumber} deve riprovare!`,
+        mentions: [randomVictim.id, m.sender]
       }, { quoted: sentMsg });
     }
     
-  } else {
-    // Kickrandom - semplice e diretto
+  } else { // Comando KICKRANDOM
     const emojis = ['🎯', '🎲', '💫', '⭐', '⚡', '🌀'];
     const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
     
     const actions = [
-      "sta volando via",
-      "viene teletrasportato",
+      "viene eliminato",
       "saluta il gruppo",
       "fa le valigie",
       "cambia aria",
-      "prende un volo"
+      "prende un volo",
+      "vasa via",
+      "si teletrasporta",
+      "lascia per sempre"
     ];
     const randomAction = actions[Math.floor(Math.random() * actions.length)];
     
-    const banMessage = `
+    const kickMessage = `
 ╔══════════════════════╗
    ${randomEmoji} *KICK RANDOM* ${randomEmoji}
 ╚══════════════════════╝
 
+👑 *Admin esecutore:* @${adminNumber}
 🎰 *Estrazione in corso...*
 
 ${createLoadingBar(luckPercent, 10)}
 
-🔮 *Il destino ha scelto:*
+🔮 *Il fato ha scelto:*
 
-👤 @${victimNumber} ${randomAction}!
+👤 *Vittima:* @${victimNumber}
+📦 *Stato:* ${randomAction} dal gruppo!
 
 ━━━━━━━━━━━━━━━━━━━
 📊 *Statistiche roulette:*
@@ -127,7 +141,7 @@ ${createLoadingBar(luckPercent, 10)}
     `;
 
     await conn.sendMessage(m.chat, {
-      text: banMessage,
+      text: kickMessage,
       mentions: [randomVictim.id, m.sender]
     }, { quoted: m });
 
@@ -149,14 +163,14 @@ function createLoadingBar(percent, length = 10) {
 
 // Configurazione
 handler.help = [
-  'kickrandom - Rimuove un utente casuale dal gruppo',
-  'rouletteban - Roulette russa: 50% di probabilità di essere bannati'
+  'kickrandom - Rimuove un utente casuale dal gruppo (SOLO ADMIN)',
+  'rouletteban - Roulette russa per utenti casuali (SOLO ADMIN)'
 ];
 
-handler.tags = ['admin', 'fun'];
+handler.tags = ['admin'];
 handler.command = ['kickrandom', 'rouletteban', 'roulette'];
 handler.group = true;
-handler.admin = true; // Solo admin
-handler.botAdmin = true; // Il bot deve essere admin
+handler.admin = false; // Non usare questo, facciamo il check manuale
+handler.botAdmin = true;
 
 export default handler;
