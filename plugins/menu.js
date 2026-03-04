@@ -1,7 +1,3 @@
-/**
- * MENU SOLO TESTO – TEMA NΞXSUS
- */
-
 import os from 'os';
 import { performance } from 'perf_hooks';
 
@@ -17,26 +13,31 @@ const handler = async (message, { conn, usedPrefix = '.' }) => {
     const totalUsers = Object.keys(global.db?.data?.users || {}).length;
 
     const menuText = `
-⚡ 𝐍ΞXSUS 𝚩𝚯𝐓 • *MENU PRINCIPALE* ⚡
+╔═══════════════════╗
+   ⚡ 𝐌𝐄𝐍𝐔 𝐏𝐑𝐈𝐍𝐂𝐈𝐏𝐀𝐋𝐄 ⚡
+╚═══════════════════╝
 
-════════════════════
-👋 Benvenuto @${userName}
+👋 Benvenuto ${userName}
 🤖 Bot attivo da: ${uptimeStr}
 👥 Utenti registrati: ${totalUsers}
-════════════════════
-🏠 *COMANDI PRINCIPALI*
 
-➤ .admin 💂🏻 *Menu Admin*
-➤ .owner 👑 *Menu Owner*
-➤ .giochi 🎮 *Menu Giochi*
-➤ .mod 🫅🏻 *Menu Moderatori*
-➤ .funzioni 🚨 *Menu Funzioni*
-➤ .soldi 📱 *Menu Soldi*
-════════════════════
-💀 *BENVENUTO SU NΞXSUS 𝚩𝚯𝐓*
+━━━━━━━━━━━━━━━━━━━━
+🏠 𝐂𝐎𝐌𝐀𝐍𝐃𝐈 𝐏𝐑𝐈𝐍𝐂𝐈𝐏𝐀𝐋𝐈
+━━━━━━━━━━━━━━━━━━━━
+
+💂🏻 ➤ ${usedPrefix}admin — *Menu Admin*
+👑 ➤ ${usedPrefix}owner — *Menu Owner*
+🎮 ➤ ${usedPrefix}giochi — *Menu Giochi*
+🫅🏻 ➤ ${usedPrefix}mod — *Menu Moderatori*
+🚨 ➤ ${usedPrefix}funzioni — *Menu Funzioni*
+📱 ➤ ${usedPrefix}soldi — *Menu Soldi*
+🖼️ ➤ ${usedPrefix}immagini — *Menu Immagini*
+
+━━━━━━━━━━━━━━━━━━━━
+💀 BENVENUTO SU NΞXSUS 𝚩𝚯𝐓
+━━━━━━━━━━━━━━━━━━━━
 `.trim();
 
-    // INVIO SOLO TESTO
     await conn.sendMessage(message.chat, { 
         text: menuText,
         mentions: [userId] // menziona l’utente per il benvenuto
