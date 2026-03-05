@@ -101,7 +101,7 @@ handler.before = async (m, { conn }) => {
 
 handler.help = ['bomba'];
 handler.tags = ['giochi'];
-handler.command = /^(bomba)$/i;
+handler.command = /^(bomba|passa)$/i;
 handler.group = true;
 
 export default handler;
