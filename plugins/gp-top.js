@@ -1,3 +1,5 @@
+// Plug-in fatto da Blood
+
 // Database globale
 globalThis.archivioMessaggi = globalThis.archivioMessaggi || {};
 
