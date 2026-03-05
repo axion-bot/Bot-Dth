@@ -5,7 +5,15 @@ var handler = async (m, { conn, isBotAdmin, isAdmin }) => {
   if (!isBotAdmin) return m.reply('⚠️ Il bot deve essere admin.')
 
   try {
-    // 1. DISATTIVA APPROVAZIONE (Apertura)
+
+    // PRENDE LISTA RICHIESTE
+    let req = await conn.groupRequestParticipantsList(m.chat)
+    let total = req?.length || 0
+
+    if (total === 0)
+      return m.reply('📭 Non ci sono richieste di ingresso.')
+
+    // 1️⃣ DISATTIVA APPROVAZIONE
     await conn.query({
       tag: 'iq',
       attrs: {
@@ -22,14 +30,16 @@ var handler = async (m, { conn, isBotAdmin, isAdmin }) => {
         }]
       }]
     })
-    
-    // Unico messaggio di avviso
-    await conn.sendMessage(m.chat, { text: '✅ Tutte le richieste sono state accettate.' }, { quoted: m })
 
-    // 2. ATTENDE 2 SECONDI
+    // MESSAGGIO CON NUMERO
+    await conn.sendMessage(m.chat, { 
+      text: `✅ Ho accettato *${total} richieste* di ingresso.` 
+    }, { quoted: m })
+
+    // 2️⃣ ASPETTA
     await delay(2000)
 
-    // 3. RIATTIVA APPROVAZIONE (Chiusura silenziosa)
+    // 3️⃣ RIATTIVA APPROVAZIONE
     await conn.query({
       tag: 'iq',
       attrs: {
@@ -46,8 +56,6 @@ var handler = async (m, { conn, isBotAdmin, isAdmin }) => {
         }]
       }]
     })
-    
-    // Nessun messaggio qui, il bot ha finito.
 
   } catch (e) {
     console.error("ERRORE_QUERY_DIRETTA:", e)
@@ -57,10 +65,10 @@ var handler = async (m, { conn, isBotAdmin, isAdmin }) => {
 
 handler.help = ['accetta']
 handler.tags = ['group']
-handler.command = ['accetta', 'acetta'] 
+handler.command = ['accetta','acetta']
 
 handler.group = true
-handler.admin = true 
+handler.admin = true
 handler.botAdmin = true
 
 export default handler
