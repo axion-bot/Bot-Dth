@@ -3,87 +3,107 @@ let handler = async (m, { conn, args, usedPrefix, command }) => {
     if (!global.db.data.users[who]) global.db.data.users[who] = {}
     let user = global.db.data.users[who]
     
-    // Inizializza i soldi se non esistono
     if (typeof user.euro === 'undefined') user.euro = 0
 
     let bet = parseInt(args[0])
+    
+    // Se non specifica la puntata, mostriamo un menu interattivo (Simulato con messaggi cliccabili)
     if (!bet || isNaN(bet) || bet <= 0) {
-        return m.reply(`🎰 *ERRORE SCHEDINA*\n\nInserisci una cifra valida da scommettere.\nEsempio: *${usedPrefix + command} 50*`)
+        let menu = `
+╭━━━ 🎰 *ＳＮＡI  ＢＥＴ* ━━━╮
+┃
+┃ 👤 *UTENTE:* @${who.split('@')[0]}
+┃ 💶 *SALDO:* ${user.euro} €
+┃
+┃ 📝 *COME GIOCARE:*
+┃ Scrivi *${usedPrefix + command} <cifra>*
+┃
+┃ *PUNTATE RAPIDE:*
+┃ 🔹 ${usedPrefix + command} 10
+┃ 🔹 ${usedPrefix + command} 50
+┃ 🔹 ${usedPrefix + command} 100
+┃
+╰━━━━━━━━━━━━━━━━━━━━╯`.trim()
+        return conn.sendMessage(m.chat, { text: menu, mentions: [who] }, { quoted: m })
     }
 
     if (user.euro < bet) {
-        return m.reply(`💸 *NON HAI ABBASTANZA EURO!*\n\nTi mancano ${bet - user.euro} € per piazzare questa scommessa.`)
+        return m.reply(`💸 *SALDO INSUFFICIENTE*\n\nTi mancano ${bet - user.euro} € per questa giocata!`)
     }
 
-    // Lista Squadre Serie A per simulazione
     const squadre = ["Inter", "Milan", "Juventus", "Napoli", "Roma", "Lazio", "Atalanta", "Fiorentina", "Torino", "Bologna"];
     let casa = squadre[Math.floor(Math.random() * squadre.length)];
-    let trasferta = squadre.filter(s => s !== casa)[Math.floor(Math.random() * (squadre.length - 1))];
+    let trasf = squadre.filter(s => s !== casa)[Math.floor(Math.random() * (squadre.length - 1))];
     
-    // Quote simulate
-    let quota = (Math.random() * (3.5 - 1.2) + 1.2).toFixed(2);
-    let vincitaPotenziale = Math.floor(bet * quota);
+    let quota = (Math.random() * (5.0 - 1.2) + 1.2).toFixed(2);
+    let vincita = Math.floor(bet * quota);
 
-    // Sottrai i soldi
     user.euro -= bet;
 
-    let initMsg = `
-╔════ ⚽ *SCOMMESSA PIAZZATA* ⚽ ════╗
+    // --- STEP 1: IL BIGLIETTO ---
+    let ticket = `
+╭━━━ 🎫 *ＴＩＣＫＥＴ  ＣＯＮＦＩＲＭＥＤ* ━━━╮
 ┃
-┃ 🏟️ *MATCH:* ${casa} vs ${trasferta}
-┃ 💰 *PUNTATA:* ${bet} €
+┃ 🏟️ *MATCH:* ${casa} - ${trasf}
+┃ 💵 *PUNTATA:* ${bet} €
 ┃ 📈 *QUOTA:* x${quota}
-┃ 🏆 *POTENZIALE VINCITA:* ${vincitaPotenziale} €
+┃ 💰 *VINCITA:* ${vincita} €
 ┃
-╚══════════════════════════════════╝
-⏳ *Simulazione in corso...*`.trim();
+╰━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╯
+*IL MATCH STA PER INIZIARE...* 🏟️`.trim();
 
-    await m.reply(initMsg);
+    let { key } = await conn.sendMessage(m.chat, { text: ticket, mentions: [who] }, { quoted: m });
 
-    // Simulazione eventi (Live Match)
-    await new Promise(res => setTimeout(res, 2500));
-    await m.reply(`📢 *30' MINUTO:* Il match è bloccato sullo 0-0. ${casa} preme in attacco!`);
-    
-    await new Promise(res => setTimeout(res, 2500));
-    
-    // Calcolo Risultato
-    let win = Math.random() > 0.55; // 45% di probabilità di vittoria
-    let scoreCasa = Math.floor(Math.random() * 4);
-    let scoreTrasferta = win ? Math.max(0, scoreCasa - 1) : Math.floor(Math.random() * 4);
-    
-    // Se doveva vincere ma il random ha dato pareggio/sconfitta, forziamo un po' il brivido
-    if (win && scoreCasa <= scoreTrasferta) scoreCasa = scoreTrasferta + 1;
+    // --- TELECRONACA MULTI-STEP ---
+    const cronaca = [
+        { t: 2000, txt: `🕒 *15' MINUTO:* Fase di studio. Il ${casa} mantiene il possesso palla. @${who.split('@')[0]} incrocia le dita...` },
+        { t: 4000, txt: `🌓 *45' MINUTO:* Intervallo! Squadre sullo 0-0. Partita molto tattica al limite della noia. 🥱` },
+        { t: 6000, txt: `🖥️ *65' MINUTO:* VAR! Possibile rigore per il ${trasf}... L'arbitro va al monitor... NON È RIGORE! Si prosegue! 🚫` },
+        { t: 8000, txt: `🔥 *82' MINUTO:* PALO! Clamoroso legno colpito da ${casa}! La bolla sta per saltare... 😱` },
+        { t: 10000, txt: `⏳ *90' MINUTO:* Recupero infuocato! 5 minuti di speranza o di dolore... ⏱️` }
+    ];
 
-    let resultMsg = "";
-    if (win) {
-        user.euro += vincitaPotenziale;
-        resultMsg = `
-🎉 *ＷＩＮＮＥＲ* 🎉
-━━━━━━━━━━━━━━━━━━━━
-🏟️ *RISULTATO:* ${casa} ${scoreCasa} - ${scoreTrasferta} ${trasferta}
-
-✅ La schedina è *VINCENTE*!
-💰 Hai incassato: +${vincitaPotenziale} €
-
-📝 *Nuovo Saldo:* ${user.euro} €
-━━━━━━━━━━━━━━━━━━━━`.trim();
-    } else {
-        resultMsg = `
-❌ *ＬＯＳＥＲ* ❌
-━━━━━━━━━━━━━━━━━━━━
-🏟️ *RISULTATO:* ${casa} ${scoreCasa} - ${scoreTrasferta} ${trasferta}
-
-📉 Schedina *PERDENTE*.
-💸 Hai perso i tuoi ${bet} €.
-
-*Nota:* Per recuperare i soldi, dovresti fare **3.750 passi** (2,5 km) per schiarirti le idee!
-━━━━━━━━━━━━━━━━━━━━`.trim();
+    for (let step of cronaca) {
+        await new Promise(res => setTimeout(res, step.t / 2)); // Velocizziamo un po' i tempi morti
+        await conn.sendMessage(m.chat, { text: step.txt, edit: key, mentions: [who] });
     }
 
-    await conn.sendMessage(m.chat, { text: resultMsg, mentions: [who] }, { quoted: m });
+    // --- ESITO FINALE ---
+    await new Promise(res => setTimeout(res, 3000));
+    let win = Math.random() > 0.7; // 30% di vincita
+    let g1 = Math.floor(Math.random() * 4);
+    let g2 = win ? Math.max(0, g1 - 1) : (g1 === 0 ? 1 : g1 + (Math.random() > 0.5 ? 1 : 0));
+
+    if (win) {
+        user.euro += vincita;
+        let winFinal = `
+✨ *ＣＡＳＨ  ＯＵＴ  ＳＵＣＣＥＳＳ* ✨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏁 *FINALE:* ${casa} ${g1} - ${g2} ${trasf}
+
+✅ *ESITO:* VINCENTE
+💰 *VINCITA:* +${vincita} €
+🏦 *NUOVO SALDO:* ${user.euro} €
+
+*Hai battuto il banco! Sei un drago delle scommesse!* 🐉
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━`.trim();
+        await conn.sendMessage(m.chat, { text: winFinal, mentions: [who] }, { edit: key });
+    } else {
+        let loseFinal = `
+💀 *ＢＯＬＬＡ  ＥＳＰＬＯＳＡ* 💀
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🏁 *FINALE:* ${casa} ${g1} - ${g2} ${trasf}
+
+❌ *ESITO:* PERDENTE
+📉 *PERDITA:* -${bet} €
+
+*La fortuna non era dalla tua.* Per smaltire la delusione, fai **3.750 passi** (2,5 km)! 🚶‍♂️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━`.trim();
+        await conn.sendMessage(m.chat, { text: loseFinal, mentions: [who] }, { edit: key });
+    }
 }
 
-handler.help = ['schedina <euro>']
+handler.help = ['schedina']
 handler.tags = ['euro']
 handler.command = /^(schedina|bet)$/i
 handler.group = true
