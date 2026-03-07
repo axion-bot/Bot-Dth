@@ -12,24 +12,13 @@ let handler = async (m, { conn, command, args, isAdmin, isOwner, isROwner }) => 
   const chat = chats[m.chat];
   const bot = settings[conn.user.jid];
 
-  // ================== THUMBNAIL ==================
-  const imageFallback = 'media/fallback.png';
-  const fetchBuffer = async (url) => {
-    if (!url) return null;
-    if (!/^https?:\/\//i.test(url)) {
-      try { return fs.readFileSync(url); } catch { return null; }
-    }
-    try {
-      const fetchFn = globalThis.fetch || (await import('node-fetch').then(m => m.default));
-      const res = await fetchFn(url);
-      if (!res.ok) return null;
-      const ab = await res.arrayBuffer();
-      return Buffer.from(ab);
-    } catch { return null; }
-  };
-
+  // ================== THUMBNAIL PROFILO ==================
   let pp;
-  try { pp = await conn.profilePictureUrl(m.sender, 'image'); } catch { pp = null; }
+  try { 
+    pp = await conn.profilePictureUrl(m.sender, 'image'); 
+  } catch { 
+    pp = null; 
+  }
 
   // ================== GRAFICA ==================
   const box = (title, stato, desc) => `
@@ -66,30 +55,30 @@ let handler = async (m, { conn, command, args, isAdmin, isOwner, isROwner }) => 
 
     case 'antiinsta':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
-      if (chat.antiInsta === isEnable) return m.reply(box('📸 ANTIINSTA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link Instagram'));
+      if (chat.antiInsta === isEnable) return m.reply(box('📸 ANTIINSTA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antiInsta = isEnable;
-      result = box('📸 ANTIINSTA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione Nexus Instagram');
+      result = box('📸 ANTIINSTA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link Instagram');
       break;
 
     case 'antitelegram':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
-      if (chat.antiTelegram === isEnable) return m.reply(box('✈️ ANTITELEGRAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link Telegram'));
+      if (chat.antiTelegram === isEnable) return m.reply(box('✈️ ANTITELEGRAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antiTelegram = isEnable;
-      result = box('✈️ ANTITELEGRAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione Nexus Telegram');
+      result = box('✈️ ANTITELEGRAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link Telegram');
       break;
 
     case 'antitiktok':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
-      if (chat.antiTiktok === isEnable) return m.reply(box('🎵 ANTITIKTOK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link TikTok'));
+      if (chat.antiTiktok === isEnable) return m.reply(box('🎵 ANTITIKTOK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antiTiktok = isEnable;
-      result = box('🎵 ANTITIKTOK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione Nexus TikTok');
+      result = box('🎵 ANTITIKTOK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link TikTok');
       break;
 
     case 'antitag':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
-      if (chat.antiTag === isEnable) return m.reply(box('🏷️ ANTITAG', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca menzioni di massa'));
+      if (chat.antiTag === isEnable) return m.reply(box('🏷️ ANTITAG', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antiTag = isEnable;
-      result = box('🏷️ ANTITAG', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione tag Nexus');
+      result = box('🏷️ ANTITAG', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca menzioni di massa');
       break;
 
     case 'antinuke':
@@ -172,7 +161,7 @@ let handler = async (m, { conn, command, args, isAdmin, isOwner, isROwner }) => 
 
   // ================== INVIO ==================
   await conn.sendMessage(m.chat, {
-    image: { url: pp || imageFallback },
+    image: { url: pp || undefined }, // nessun fallback
     caption: result,
     footer: '📋 Menu rapido NΞXSUS',
     buttons: [
