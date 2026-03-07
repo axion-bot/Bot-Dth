@@ -14,7 +14,7 @@ const handler = async (message, { conn, usedPrefix = '.' }) => {
 
     const menuText = `
 ╭━━━〔 🤖 𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓 〕━━━⬣
-┃ 👋 Ciao ${userId.split('@')[0]}
+┃ 👋 Ciao @${userId.split('@')[0]}
 ┃
 ┃ ⏱️ Uptime: ${uptimeStr}
 ┃ 👥 Utenti registrati: ${totalUsers}
