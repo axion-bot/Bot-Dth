@@ -12,7 +12,7 @@ let handler = async (m, { conn, command, args, isAdmin, isOwner, isROwner }) => 
   const chat = chats[m.chat];
   const bot = settings[conn.user.jid];
 
-  // ================== THUMBNAIL PROFILO ==================
+  // ================== RECUPERO IMMAGINE PROFILO ==================
   let pp;
   try { 
     pp = await conn.profilePictureUrl(m.sender, 'image'); 
@@ -20,7 +20,21 @@ let handler = async (m, { conn, command, args, isAdmin, isOwner, isROwner }) => 
     pp = null; 
   }
 
-  // ================== GRAFICA ==================
+  // Funzione per convertire l'URL in Buffer (senza fallback locale)
+  const getBuffer = async (url) => {
+    if (!url) return null;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      return Buffer.from(await res.arrayBuffer());
+    } catch {
+      return null;
+    }
+  };
+
+  const profileBuffer = await getBuffer(pp);
+
+  // ================== GRAFICA BOX ==================
   const box = (title, stato, desc) => `
 ╔═══════════════════╗
 ║ ⚡ NΞXSUS • ${title} ⚡
@@ -29,14 +43,14 @@ let handler = async (m, { conn, command, args, isAdmin, isOwner, isROwner }) => 
 ║ ${desc}
 ╚═══════════════════╝`.trim();
 
-  const noAdmin = box('ACCESSO NEGATO', '❌ Solo Admin possono modificare', 'Rituale proibito');
-  const noOwner = box('POTERE SUPREMO', '👑 Solo Owner può modificare', 'Autorità insufficiente');
+  const noAdmin = box('ACCESSO NEGATO', '❌ Solo Admin', 'Rituale proibito');
+  const noOwner = box('POTERE SUPREMO', '👑 Solo Owner', 'Autorità insufficiente');
 
   if (!args[0]) {
     throw box(
       'RITUALE DI COMANDO',
-      'ℹ️ Usa: .attiva <funzione> / .disattiva <funzione>',
-      'Funzioni disponibili: antilink, antispam, antibot, antiporno, antigore, modoadmin, benvenuto, addio, antiprivato, antinuke, antiinsta, antitelegram, antitiktok, antitag, antitrava'
+      'ℹ️ Usa: .attiva <funzione>',
+      'antilink, antispam, antibot, antiporno, antigore, modoadmin, benvenuto, addio, antiprivato, antinuke, antiinsta, antitelegram, antitiktok, antitag, antitrava'
     );
   }
 
@@ -45,12 +59,11 @@ let handler = async (m, { conn, command, args, isAdmin, isOwner, isROwner }) => 
 
   // ================== SWITCH FUNZIONI ==================
   switch(feature) {
-
     case 'antilink':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
       if (chat.antiLink === isEnable) return m.reply(box('🔗 ANTILINK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antiLink = isEnable;
-      result = box('🔗 ANTILINK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link WhatsApp e portali proibiti');
+      result = box('🔗 ANTILINK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link WhatsApp');
       break;
 
     case 'antiinsta':
@@ -85,14 +98,14 @@ let handler = async (m, { conn, command, args, isAdmin, isOwner, isROwner }) => 
       if (!isOwner && !isROwner) return m.reply(noOwner);
       if (chat.antinuke === isEnable) return m.reply(box('💣 ANTINUKE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antinuke = isEnable;
-      result = box('💣 ANTINUKE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione distruzione di massa');
+      result = box('💣 ANTINUKE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione distruzione');
       break;
 
     case 'antigore':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
       if (chat.antigore === isEnable) return m.reply(box('🚫 ANTIGORE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antigore = isEnable;
-      result = box('🚫 ANTIGORE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Purificazione contenuti violenti');
+      result = box('🚫 ANTIGORE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Filtro contenuti violenti');
       break;
 
     case 'antiporno':
@@ -100,80 +113,73 @@ let handler = async (m, { conn, command, args, isAdmin, isOwner, isROwner }) => 
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
       if (chat.antiporno === isEnable) return m.reply(box('🔞 ANTIPORNO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antiporno = isEnable;
-      result = box('🔞 ANTIPORNO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione contenuti proibiti');
+      result = box('🔞 ANTIPORNO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione NSFW');
       break;
 
     case 'modoadmin':
-    case 'soloadmin':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
-      if (chat.modoadmin === isEnable) return m.reply(box('🛡️ MODO ADMIN', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.modoadmin = isEnable;
-      result = box('🛡️ MODO ADMIN', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Solo admin può usare comandi Nexus');
+      result = box('🛡️ MODO ADMIN', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Comandi solo per staff');
       break;
 
     case 'benvenuto':
-    case 'welcome':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
-      if (chat.welcome === isEnable) return m.reply(box('👋 WELCOME', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.welcome = isEnable;
-      result = box('👋 WELCOME', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Messaggio di benvenuto attivo');
+      result = box('👋 WELCOME', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Messaggi d\'ingresso');
       break;
 
     case 'addio':
-    case 'goodbye':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
-      if (chat.goodbye === isEnable) return m.reply(box('🚪 GOODBYE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.goodbye = isEnable;
-      result = box('🚪 GOODBYE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Messaggio di congedo attivo');
+      result = box('🚪 GOODBYE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Messaggi d\'uscita');
       break;
 
     case 'antiprivato':
       if (!isOwner && !isROwner) return m.reply(noOwner);
-      if (bot.antiprivato === isEnable) return m.reply(box('🔒 ANTIPRIVATO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       bot.antiprivato = isEnable;
-      result = box('🔒 ANTIPRIVATO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca messaggi privati al bot');
+      result = box('🔒 ANTIPRIVATO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca DM');
       break;
 
     case 'antibot':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
-      if (chat.antiBot === isEnable) return m.reply(box('🤖 ANTIBOT', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antiBot = isEnable;
-      result = box('🤖 ANTIBOT', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca bot esterni non autorizzati');
+      result = box('🤖 ANTIBOT', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca altri bot');
       break;
 
     case 'antispam':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
-      if (chat.antispam === isEnable) return m.reply(box('🛑 ANTISPAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antispam = isEnable;
-      result = box('🛑 ANTISPAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione contro spam e flood');
+      result = box('🛑 ANTISPAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione flood');
       break;
 
     case 'antitrava':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin);
-      if (chat.antitrava === isEnable) return m.reply(box('🧱 ANTITRAVA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'));
       chat.antitrava = isEnable;
-      result = box('🧱 ANTITRAVA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca messaggi crash e trappole');
+      result = box('🧱 ANTITRAVA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca messaggi crash');
       break;
 
     default:
-      return m.reply(box('❓ FUNZIONE SCONOSCIUTA', '⚠️ Nessun rituale corrispondente', 'Verifica il nome della funzione'));
+      return m.reply(box('❓ SCONOSCIUTO', '⚠️ Errore', 'Funzione non trovata'));
   }
 
-  // ================== INVIO ==================
+  // ================== INVIO CON GRAFICA PICCOLA ==================
   await conn.sendMessage(m.chat, {
-    image: { url: pp || undefined }, // nessun fallback
-    caption: result,
-    footer: '📋 Menu rapido NΞXSUS',
-    buttons: [
-      { buttonId: '.funzioni', buttonText: { displayText: '📋 Funzioni' }, type: 1 }
-    ],
-    headerType: 4
+    text: result,
+    contextInfo: {
+      externalAdReply: {
+        title: 'NΞXSUS SYSTEM CONTROL',
+        body: `Richiesto da: ${m.pushName}`,
+        thumbnail: profileBuffer, // Miniatura dinamica (null se non esiste)
+        sourceUrl: '', 
+        mediaType: 1,
+        renderLargerThumbnail: false // Mantiene l'immagine piccola come richiesto
+      }
+    }
   }, { quoted: m });
 };
 
 handler.help = ['attiva','disattiva'];
 handler.tags = ['group'];
 handler.command = ['attiva','disattiva','enable','disable','on','off','1','0'];
-handler.group = false;
 
 export default handler;
