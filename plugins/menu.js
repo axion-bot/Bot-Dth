@@ -13,7 +13,7 @@ const handler = async (message, { conn, usedPrefix = '.' }) => {
     const totalUsers = Object.keys(global.db?.data?.users || {}).length;
 
     const menuText = `
-╭━━━〔 🤖 NΞXSUS 𝚩𝚯𝐓 〕━━━⬣
+╭━━━〔 🤖 𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓 〕━━━⬣
 ┃ 👋 Ciao ${userId.split('@')[0]}
 ┃
 ┃ ⏱️ Uptime: ${uptimeStr}
