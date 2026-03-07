@@ -10,237 +10,152 @@ let handler = async (m, { conn, command, args, isAdmin, isOwner, isROwner }) => 
   const chat = chats[m.chat]
   const bot = settings[conn.user.jid]
 
-  /* ====== GRAFICA 𝐍𝚵𝑿𝐒𝐔𝐒 ====== */
-  const box = (title, lines) =>
-`╔═══━─━─━─━─━─━─━═══╗
-   ⚡ 𝐍𝚵𝑿𝐒𝐔𝐒 • ${title} ⚡
-╚═══━─━─━─━─━─━─━═══╝
-${lines.map(l => `➤ ${l}`).join('\n')}
-━━━━━━━━━━━━━━━━━━`
+  // Ottieni thumbnail dell'utente
+  let pp
+  try {
+    pp = await conn.profilePictureUrl(m.sender, 'image')
+  } catch {
+    pp = 'https://i.imgur.com/IlU5EXA.png' // fallback immagine se non c'è profilo
+  }
 
-  const noAdmin = box('𝐀𝐂𝐂𝐄𝐒𝐒𝐎 𝐍𝐄𝐆𝐀𝐓𝐎', [
-    '⚔️ Solo gli Admin possono evocare questo potere',
-    'Il rituale ti è proibito'
-  ])
+  // Funzione grafica premium
+  const box = (title, stato, desc) => `
+╔═══════════════════╗
+║ ⚡ NΞXSUS • ${title} ⚡
+╠═══════════════════╣
+║ Stato: ${stato}
+║ ${desc}
+╚═══════════════════╝`.trim()
 
-  const noOwner = box('𝐏𝐎𝐓𝐄𝐑𝐄 𝐒𝐔𝐏𝐑𝐄𝐌𝐎', [
-    '👑 Solo l’Owner può controllare questa energia',
-    'Autorità insufficiente'
-  ])
+  const noAdmin = box('ACCESSO NEGATO', '❌ Solo Admin possono modificare', 'Rituale proibito')
+  const noOwner = box('POTERE SUPREMO', '👑 Solo Owner può modificare', 'Autorità insufficiente')
 
   if (!args[0]) {
-    throw box('𝐑𝐈𝐓𝐔𝐀𝐋𝐄 𝐃𝐈 𝐂𝐎𝐌𝐀𝐍𝐃𝐎', [
-      '.attiva <funzione>',
-      '.disattiva <funzione>',
-      '',
-      'Funzioni disponibili:',
-      'antilink, antigore, antiporno, modoadmin',
-      'benvenuto, addio, antiprivato, antibot',
-      'antispam, antinuke, antiinsta, antitelegram',
-      'antitiktok, antitag, antitrava'
-    ])
+    throw box('RITUALE DI COMANDO', 'Usa:\n.attiva <funzione> / .disattiva <funzione>\nFunzioni disponibili: antilink, antispam, antibot, antiporno, antigore, modoadmin, benvenuto, addio, antiprivato, antinuke, antiinsta, antitelegram, antitiktok, antitag, antitrava')
   }
 
   let feature = args[0].toLowerCase()
   let result = ''
 
-  switch (feature) {
-
+  // === SWITCH PER FUNZIONI ===
+  switch(feature) {
     case 'antilink':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.antiLink === isEnable)
-        return m.reply(box('🔗 𝐀𝐍𝐓𝐈𝐋𝐈𝐍𝐊', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antiLink === isEnable) return m.reply(box('🔗 ANTILINK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antiLink = isEnable
-      result = box('🔗 𝐀𝐍𝐓𝐈𝐋𝐈𝐍𝐊', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Blocca portali WhatsApp proibiti del Nexus'
-      ])
+      result = box('🔗 ANTILINK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link WhatsApp e portali proibiti')
       break
-
     case 'antiinsta':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.antiInsta === isEnable)
-        return m.reply(box('📸 𝐀𝐍𝐓𝐈𝐈𝐍𝐒𝐓𝐀', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antiInsta === isEnable) return m.reply(box('📸 ANTIINSTA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antiInsta = isEnable
-      result = box('📸 𝐀𝐍𝐓𝐈𝐈𝐍𝐒𝐓𝐀', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Blocca link Instagram per protezione Nexus'
-      ])
+      result = box('📸 ANTIINSTA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link Instagram nel Nexus')
       break
-
     case 'antitelegram':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.antiTelegram === isEnable)
-        return m.reply(box('✈️ 𝐀𝐍𝐓𝐈𝐓𝐄𝐋𝐄𝐆𝐑𝐀𝐌', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antiTelegram === isEnable) return m.reply(box('✈️ ANTITELEGRAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antiTelegram = isEnable
-      result = box('✈️ 𝐀𝐍𝐓𝐈𝐓𝐄𝐋𝐄𝐆𝐑𝐀𝐌', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Blocca link Telegram nel Nexus'
-      ])
+      result = box('✈️ ANTITELEGRAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link Telegram nel Nexus')
       break
-
     case 'antitiktok':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.antiTiktok === isEnable)
-        return m.reply(box('🎵 𝐀𝐍𝐓𝐈𝐓𝐈𝐊𝐓𝐎𝐊', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antiTiktok === isEnable) return m.reply(box('🎵 ANTITIKTOK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antiTiktok = isEnable
-      result = box('🎵 𝐀𝐍𝐓𝐈𝐓𝐈𝐊𝐓𝐎𝐊', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Blocca link TikTok per la sicurezza Nexus'
-      ])
+      result = box('🎵 ANTITIKTOK', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca link TikTok nel Nexus')
       break
-
     case 'antitag':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.antiTag === isEnable)
-        return m.reply(box('🏷️ 𝐀𝐍𝐓𝐈𝐓𝐀𝐆', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antiTag === isEnable) return m.reply(box('🏷️ ANTITAG', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antiTag = isEnable
-      result = box('🏷️ 𝐀𝐍𝐓𝐈𝐓𝐀𝐆', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Blocca tag e menzioni di massa nel Nexus'
-      ])
+      result = box('🏷️ ANTITAG', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca menzioni di massa nel Nexus')
       break
-
     case 'antinuke':
       if (!isOwner && !isROwner) return m.reply(noOwner)
-      if (chat.antinuke === isEnable)
-        return m.reply(box('💣 𝐀𝐍𝐓𝐈𝐍𝐔𝐊𝐄', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antinuke === isEnable) return m.reply(box('💣 ANTINUKE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antinuke = isEnable
-      result = box('💣 𝐀𝐍𝐓𝐈𝐍𝐔𝐊𝐄', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Protezione contro distruzione di massa',
-        isEnable ? '🛡️ Il gruppo è sotto protezione 𝐍𝚵𝑿𝐒𝐔𝐒' : '☠️ Difese abbassate'
-      ])
+      result = box('💣 ANTINUKE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione contro distruzione di massa')
       break
-
     case 'antigore':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.antigore === isEnable)
-        return m.reply(box('🚫 𝐀𝐍𝐓𝐈𝐆𝐎𝐑𝐄', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antigore === isEnable) return m.reply(box('🚫 ANTIGORE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antigore = isEnable
-      result = box('🚫 𝐀𝐍𝐓𝐈𝐆𝐎𝐑𝐄', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Purificazione contenuti violenti del Nexus'
-      ])
+      result = box('🚫 ANTIGORE', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca contenuti violenti nel Nexus')
       break
-
     case 'antiporno':
     case 'antiporn':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.antiporno === isEnable)
-        return m.reply(box('🔞 𝐀𝐍𝐓𝐈𝐏𝐎𝐑𝐍𝐎', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antiporno === isEnable) return m.reply(box('🔞 ANTIPORNO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antiporno = isEnable
-      result = box('🔞 𝐀𝐍𝐓𝐈𝐏𝐎𝐑𝐍𝐎', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Purificazione contenuti corrotti del Nexus'
-      ])
+      result = box('🔞 ANTIPORNO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca contenuti sessuali nel Nexus')
       break
-
     case 'modoadmin':
     case 'soloadmin':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.modoadmin === isEnable)
-        return m.reply(box('🛡️ 𝐌𝐎𝐃𝐎 𝐀𝐃𝐌𝐈𝐍', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.modoadmin === isEnable) return m.reply(box('🛡️ MODO ADMIN', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.modoadmin = isEnable
-      result = box('🛡️ 𝐌𝐎𝐃𝐎 𝐀𝐃𝐌𝐈𝐍', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Solo gli eletti possono usare i comandi Nexus'
-      ])
+      result = box('🛡️ MODO ADMIN', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Solo gli eletti possono usare i comandi Nexus')
       break
-
     case 'benvenuto':
     case 'welcome':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.welcome === isEnable)
-        return m.reply(box('👋 𝐑𝐈𝐓𝐔𝐀𝐋𝐄 𝐃𝐈 𝐈𝐍𝐆𝐑𝐄𝐒𝐒𝐎', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.welcome === isEnable) return m.reply(box('👋 WELCOME', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.welcome = isEnable
-      result = box('👋 𝐑𝐈𝐓𝐔𝐀𝐋𝐄 𝐃𝐈 𝐈𝐍𝐆𝐑𝐄𝐒𝐒𝐎', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Accoglienza Nexus attiva'
-      ])
+      result = box('👋 WELCOME', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Messaggio di benvenuto attivo')
       break
-
     case 'addio':
     case 'goodbye':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.goodbye === isEnable)
-        return m.reply(box('🚪 𝐑𝐈𝐓𝐔𝐀𝐋𝐄 𝐃𝐈 𝐔𝐒𝐂𝐈𝐓𝐀', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.goodbye === isEnable) return m.reply(box('🚪 ADDIO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.goodbye = isEnable
-      result = box('🚪 𝐑𝐈𝐓𝐔𝐀𝐋𝐄 𝐃𝐈 𝐔𝐒𝐂𝐈𝐓𝐀', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Messaggio di congedo Nexus'
-      ])
+      result = box('🚪 ADDIO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Messaggio di congedo attivo')
       break
-
     case 'antiprivato':
       if (!isOwner && !isROwner) return m.reply(noOwner)
-      if (bot.antiprivato === isEnable)
-        return m.reply(box('🔒 𝐀𝐍𝐓𝐈𝐏𝐑𝐈𝐕𝐀𝐓𝐎', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (bot.antiprivato === isEnable) return m.reply(box('🔒 ANTIPRIVATO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       bot.antiprivato = isEnable
-      result = box('🔒 𝐀𝐍𝐓𝐈𝐏𝐑𝐈𝐕𝐀𝐓𝐎', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Blocca messaggi privati al bot Nexus'
-      ])
+      result = box('🔒 ANTIPRIVATO', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca messaggi privati al bot')
       break
-
     case 'antibot':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.antiBot === isEnable)
-        return m.reply(box('🤖 𝐀𝐍𝐓𝐈𝐁𝐎𝐓', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antiBot === isEnable) return m.reply(box('🤖 ANTIBOT', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antiBot = isEnable
-      result = box('🤖 𝐀𝐍𝐓𝐈𝐁𝐎𝐓', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Blocca bot esterni non autorizzati nel Nexus'
-      ])
+      result = box('🤖 ANTIBOT', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca bot esterni non autorizzati')
       break
-
     case 'antispam':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.antispam === isEnable)
-        return m.reply(box('🛑 𝐀𝐍𝐓𝐈𝐒𝐏𝐀𝐌', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antispam === isEnable) return m.reply(box('🛑 ANTISPAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antispam = isEnable
-      result = box('🛑 𝐀𝐍𝐓𝐈𝐒𝐏𝐀𝐌', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Protezione contro spam e flood Nexus'
-      ])
+      result = box('🛑 ANTISPAM', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Protezione contro spam e flood')
       break
-
     case 'antitrava':
       if (m.isGroup && !(isAdmin || isOwner || isROwner)) return m.reply(noAdmin)
-      if (chat.antitrava === isEnable)
-        return m.reply(box('🧱 𝐀𝐍𝐓𝐈𝐓𝐑𝐀𝐕𝐀', ['Il sigillo è già ' + (isEnable ? 'attivo' : 'disattivo')]))
-
+      if (chat.antitrava === isEnable) return m.reply(box('🧱 ANTITRAVA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Lo stato è già impostato'))
       chat.antitrava = isEnable
-      result = box('🧱 𝐀𝐍𝐓𝐈𝐓𝐑𝐀𝐕𝐀', [
-        `Stato rituale: ${isEnable ? '🟢 𝐀𝐓𝐓𝐈𝐕𝐎' : '🔴 𝐃𝐈𝐒𝐀𝐓𝐓𝐈𝐕𝐎'}`,
-        'Blocca messaggi crash e trappole Nexus'
-      ])
+      result = box('🧱 ANTITRAVA', (isEnable ? '🟢 ATTIVO' : '🔴 DISATTIVO'), 'Blocca messaggi crash e trappole')
       break
-
     default:
-      return m.reply(box('❓ 𝐅𝐔𝐍𝐙𝐈𝐎𝐍𝐄 𝐒𝐂𝐎𝐍𝐎𝐒𝐂𝐈𝐔𝐓𝐀', ['Il rituale richiesto non esiste nel Nexus']))
+      return m.reply(box('❓ FUNZIONE SCONOSCIUTA', '⚠️ Nessun rituale corrispondente', 'Verifica il nome della funzione'))
   }
 
-  return m.reply(result)
+  // Invio messaggio con thumbnail e bottone
+  await conn.sendMessage(m.chat, {
+    image: { url: pp },
+    caption: result,
+    footer: '📋 Menu rapido NΞXSUS',
+    buttons: [
+      {
+        buttonId: '.funzioni',
+        buttonText: { displayText: '📋 Funzioni' },
+        type: 1
+      }
+    ],
+    headerType: 4
+  }, { quoted: m })
 }
 
-handler.help = ['attiva', 'disattiva']
+handler.help = ['attiva','disattiva']
 handler.tags = ['group']
-handler.command = ['attiva', 'disattiva', 'enable', 'disable', 'on', 'off', '1', '0']
+handler.command = ['attiva','disattiva','enable','disable','on','off','1','0']
 handler.group = false
 
 export default handler
