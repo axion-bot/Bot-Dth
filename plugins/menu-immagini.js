@@ -1,33 +1,35 @@
 const handler = async (message, { conn, usedPrefix = '.' }) => {
 
 const menuText = `
-╔═════════════════╗
-   🎨 𝐌𝐄𝐍𝐔 𝐈𝐌𝐌𝐀𝐆𝐈𝐍𝐈 🖼️
-╚═════════════════╝
+╭━━━〔 🎨 IMAGE PANEL 〕━⬣
+┃ 🖼️ Comandi immagini divertenti
+╰━━━━━━━━━━━━━━━━⬣
 
-━━━━━━━━━━━━━━━━━━━━
-🧪 𝐈𝐌𝐌𝐀𝐆𝐈𝐍𝐈 𝐃𝐈𝐕𝐄𝐑𝐓𝐄𝐍𝐓𝐈
-━━━━━━━━━━━━━━━━━━━━
+╭━━━〔 🧪 METRI DIVERTENTI 〕━⬣
+┃ 🥰 ${usedPrefix}bellometro
+┃ 🌈 ${usedPrefix}gaymetro
+┃ 💖 ${usedPrefix}lesbiometro
+┃ 🍆 ${usedPrefix}masturbometro
+┃ 🍀 ${usedPrefix}fortunometro
+┃ 🧠 ${usedPrefix}intelligiometro
+╰━━━━━━━━━━━━━━━━⬣
 
-🥰 ➤ ${usedPrefix}𝐛𝐞𝐥𝐥𝐨𝐦𝐞𝐭𝐫𝐨  
-🌈 ➤ ${usedPrefix}𝐠𝐚𝐲𝐦𝐞𝐭𝐫𝐨  
-💖 ➤ ${usedPrefix}𝐥𝐞𝐬𝐛𝐢𝐨𝐦𝐞𝐭𝐫𝐨  
-🍆 ➤ ${usedPrefix}𝐦𝐚𝐬𝐭𝐮𝐫𝐛𝐨𝐦𝐞𝐭𝐫𝐨  
-🍀 ➤ ${usedPrefix}𝐟𝐨𝐫𝐭𝐮𝐧𝐨𝐦𝐞𝐭𝐫𝐨  
-🧠 ➤ ${usedPrefix}𝐢𝐧𝐭𝐞𝐥𝐥𝐢𝐠𝐢𝐨𝐦𝐞𝐭𝐫𝐨  
-💦 ➤ ${usedPrefix}𝐬𝐛𝐨𝐫𝐫𝐚  
-❤️ ➤ ${usedPrefix}𝐢𝐥  
-🕴🏻 ➤ ${usedPrefix}𝐰𝐚𝐬𝐭𝐞𝐝  
-💂🏻 ➤ ${usedPrefix}𝐜𝐨𝐦𝐮𝐧𝐢𝐬𝐭𝐚  
-👙 ➤ ${usedPrefix}𝐛𝐢𝐬𝐞𝐱  
-🏳️‍🌈 ➤ ${usedPrefix}𝐠𝐚𝐲  
-🃏 ➤ ${usedPrefix}𝐬𝐢𝐦𝐩𝐜𝐚𝐫𝐝  
-🏳️‍⚧️ ➤ ${usedPrefix}𝐭𝐫𝐚𝐧𝐬  
+╭━━━〔 🎭 IMMAGINI MEME 〕━⬣
+┃ 💦 ${usedPrefix}sborra
+┃ ❤️ ${usedPrefix}il
+┃ 🕴 ${usedPrefix}wasted
+┃ 💂 ${usedPrefix}comunista
+┃ 👙 ${usedPrefix}bisex
+┃ 🏳️‍🌈 ${usedPrefix}gay
+┃ 🃏 ${usedPrefix}simpcard
+┃ 🏳️‍⚧️ ${usedPrefix}trans
+╰━━━━━━━━━━━━━━━━⬣
 
-
-━━━━━━━━━━━━━━━━━━━━
-🔖 𝐕𝐞𝐫𝐬𝐢𝐨𝐧𝐞: 1.0 🚀
-━━━━━━━━━━━━━━━━━━━━
+╭━━━〔 📌 INFO 〕━⬣
+┃ Categoria: Immagini
+┃ Versione: 1.0
+┃ Status: Online ⚡
+╰━━━━━━━━━━━━━━━━⬣
 `.trim();
 
 await conn.sendMessage(message.chat, { text: menuText });
