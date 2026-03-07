@@ -13,31 +13,44 @@ const handler = async (message, { conn, usedPrefix = '.' }) => {
     const totalUsers = Object.keys(global.db?.data?.users || {}).length;
 
     const menuText = `
-╔═══════════════════╗
-   ⚡ 𝐌𝐄𝐍𝐔 𝐏𝐑𝐈𝐍𝐂𝐈𝐏𝐀𝐋𝐄 ⚡
-╚═══════════════════╝
+╭━━━〔 🤖 NΞXSUS 𝚩𝚯𝐓 〕━━━⬣
+┃ 👋 Ciao ${userId.split('@')[0]}
+┃
+┃ ⏱️ Uptime: ${uptimeStr}
+┃ 👥 Utenti registrati: ${totalUsers}
+╰━━━━━━━━━━━━━━━━⬣
 
-👋 Benvenuto ${userName}
-🤖 Bot attivo da: ${uptimeStr}
-👥 Utenti registrati: ${totalUsers}
+╭━━━〔 📜 MENU PRINCIPALE 〕━━━⬣
+┃
+┃ 🛡️  ${usedPrefix}admin
+┃     › Menu amministratori
+┃
+┃ 👑  ${usedPrefix}owner
+┃     › Menu proprietario bot
+┃
+┃ 🎮  ${usedPrefix}giochi
+┃     › Giochi e divertimento
+┃
+┃ 🧑‍⚖️  ${usedPrefix}mod
+┃     › Strumenti moderatori
+┃
+┃ ⚙️  ${usedPrefix}funzioni
+┃     › Funzioni del bot
+┃
+┃ 💰  ${usedPrefix}soldi
+┃     › Sistema economia
+┃
+┃ 🖼️  ${usedPrefix}immagini
+┃     › Generazione immagini
+┃
+╰━━━━━━━━━━━━━━━━⬣
 
-━━━━━━━━━━━━━━━━━━━━
-🏠 𝐂𝐎𝐌𝐀𝐍𝐃𝐈 𝐏𝐑𝐈𝐍𝐂𝐈𝐏𝐀𝐋𝐈
-━━━━━━━━━━━━━━━━━━━━
-
-💂🏻 ➤ ${usedPrefix}admin — *Menu Admin*
-👑 ➤ ${usedPrefix}owner — *Menu Owner*
-🎮 ➤ ${usedPrefix}giochi — *Menu Giochi*
-🫅🏻 ➤ ${usedPrefix}mod — *Menu Moderatori*
-🚨 ➤ ${usedPrefix}funzioni — *Menu Funzioni*
-📱 ➤ ${usedPrefix}soldi — *Menu Soldi*
-🖼️ ➤ ${usedPrefix}immagini — *Menu Immagini*
-
-━━━━━━━━━━━━━━━━━━━━
-💀 BENVENUTO SU NΞXSUS 𝚩𝚯𝐓
-━━━━━━━━━━━━━━━━━━━━
+╭━━━〔 ⚡ INFO BOT 〕━━━⬣
+┃ Prefix: ${usedPrefix}
+┃ Owner: 𝕯𝖊ⱥ𝖉𝖑𝐲
+┃ Powered by 𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓
+╰━━━━━━━━━━━━━━━━⬣
 `.trim();
-
     await conn.sendMessage(message.chat, { 
         text: menuText,
         mentions: [userId] // menziona l’utente per il benvenuto
