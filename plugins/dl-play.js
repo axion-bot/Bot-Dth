@@ -1,6 +1,10 @@
 import yts from 'yt-search';
 import fg from 'api-dylux';
 import fetch from 'node-fetch';
+import { exec } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 let handler = async (m, { conn, text, usedPrefix, command }) => {
   if (!text) return m.reply(`⚡ *𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓*\n\n💡 _Scrivi:_ ${usedPrefix + command} nome canzone`);
@@ -10,10 +14,6 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
     const vid = search.videos[0];
     if (!vid) return m.reply('⚠️ *𝗥𝗶𝘀𝘂𝗹𝘁𝗮𝘁𝗼 𝗻𝗼𝗻 𝘁𝗿𝗼𝘃𝗮𝘁𝗼.*');
 
-    if (vid.seconds > 1800) {
-        return m.reply('🚫 *𝗙𝗶𝗹𝗲 𝘁𝗿𝗼𝗽𝗽𝗼 𝗴𝗿𝗮𝗻𝗱𝗲!* (Max 30 min)');
-    }
-
     const url = vid.url;
 
     if (command === 'play') {
@@ -21,10 +21,8 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
         infoMsg += `   🎧  *𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓 𝐏𝐋𝐀𝐘𝐄𝐑* 🎧\n`;
         infoMsg += `┗━━━━━━━━━━━━━━━━━━━━┛\n\n`;
         infoMsg += `◈ 📌 *𝗧𝗶𝘁𝗼𝗹𝗼:* ${vid.title}\n`;
-        infoMsg += `◈ ⏱️ *𝗗𝘂𝗿𝗮𝘁𝗮:* ${vid.timestamp}\n`;
-        infoMsg += `◈ 👀 *𝗩𝗶𝗲𝘄𝘀:* ${vid.views.toLocaleString()}\n`;
-        infoMsg += `◈ 📅 *𝗣𝘂𝗯𝗯𝗹𝗶𝗰𝗮𝘁𝗼:* ${vid.ago}\n\n`;
-        infoMsg += `*𝗦𝗲𝗹𝗲𝘇𝗶𝗼𝗻𝗮 𝗶𝗹 𝗳𝗼𝗿𝗺𝗮𝘁𝗼 𝗱𝗮 𝘀𝗰𝗮𝗿𝗶𝗰𝗮𝗿𝗲:*`;
+        infoMsg += `◈ ⏱️ *𝗗𝘂𝗿𝗮𝘁𝗮:* ${vid.timestamp}\n\n`;
+        infoMsg += `*𝗦𝗲𝗹𝗲𝘇𝗶𝗼𝗻𝗮 𝗶𝗹 𝗳𝗼𝗿𝗺𝗮𝘁𝗼:*`;
 
         return await conn.sendMessage(m.chat, {
             image: { url: vid.thumbnail },
@@ -43,57 +41,44 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
     let downloadUrl = null;
     const isAudio = command === 'playaud';
 
+    // Recupero Link (stessa logica tua)
     try {
         let res = isAudio ? await fg.yta(url) : await fg.ytv(url);
         if (res && res.dl_url) downloadUrl = res.dl_url;
     } catch {
-        try {
-            let api = isAudio ? 'ytmp3' : 'ytmp4';
-            let res = await fetch(`https://api.vreden.my.id/api/${api}?url=${url}`);
-            let json = await res.json();
-            downloadUrl = json.result?.download?.url;
-        } catch {
-            try {
-                let res = await fetch(`https://api.siputzx.my.id/api/d/${isAudio ? 'ytmp3' : 'ytmp4'}?url=${url}`);
-                let json = await res.json();
-                downloadUrl = isAudio ? json.data?.dl : json.data?.dl;
-            } catch {
-                throw new Error();
-            }
-        }
+        let api = isAudio ? 'ytmp3' : 'ytmp4';
+        let res = await fetch(`https://api.vreden.my.id/api/${api}?url=${url}`);
+        let json = await res.json();
+        downloadUrl = json.result?.download?.url || json.result?.url;
     }
 
     if (!downloadUrl) throw new Error();
 
-    let resBuffer = await fetch(downloadUrl);
-    let mediaBuffer = Buffer.from(await resBuffer.arrayBuffer());
+    const tmpDir = os.tmpdir();
+    const inputPath = path.join(tmpDir, `input_${Date.now()}`);
+    const outputPath = path.join(tmpDir, `output_${Date.now()}.${isAudio ? 'mp3' : 'mp4'}`);
+
+    // Scarichiamo il file fisicamente nella VPS
+    const res = await fetch(downloadUrl);
+    const arrayBuffer = await res.arrayBuffer();
+    fs.writeFileSync(inputPath, Buffer.from(arrayBuffer));
 
     if (isAudio) {
+        // TRUCCO: Usiamo FFmpeg per convertire in MP3 standard a 128kbps (compatibile ovunque)
+        await new Promise((resolve, reject) => {
+            exec(`ffmpeg -i ${inputPath} -vn -ar 44100 -ac 2 -b:a 128k ${outputPath}`, (err) => {
+                if (err) reject(err);
+                else resolve();
+            });
+        });
+
         await conn.sendMessage(m.chat, {
-            audio: mediaBuffer,
+            audio: fs.readFileSync(outputPath),
             mimetype: 'audio/mpeg',
             fileName: `${vid.title}.mp3`,
             ptt: false
         }, { quoted: m });
     } else {
         await conn.sendMessage(m.chat, {
-            video: mediaBuffer,
+            video: fs.readFileSync(inputPath),
             mimetype: 'video/mp4',
-            caption: `✅ *𝐒𝐜𝐚𝐫𝐢𝐜𝐚𝐭𝐨 𝐝𝐚 𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓*\n🎬 _${vid.title}_`,
-            fileName: `${vid.title}.mp4`
-        }, { quoted: m });
-    }
-
-    await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
-
-  } catch (e) {
-    await conn.sendMessage(m.chat, { react: { text: "✖️", key: m.key } });
-    m.reply('🚀 *𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓 𝐄𝐑𝐑𝐎𝐑:* Server temporaneamente offline.');
-  }
-};
-
-handler.help = ['play'];
-handler.tags = ['downloader'];
-handler.command = /^(play|playaud|playvid|canzone)$/i;
-
-export default handler;
