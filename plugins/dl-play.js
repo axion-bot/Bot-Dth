@@ -4,107 +4,126 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 
-/* ================= HELPERS (Font & Simboli) ================= */
-const styles = {
-  title: (t) => `『 🎶 *${t.toUpperCase()}* 🎶 』`,
-  info: (k, v) => `  ◦  *${k}:* \`${v}\``,
-  divider: "▬▬▬▬▬▬▬▬▬▬▬▬▬▬"
+/**
+ * VAREBOT PLAY PLUGIN - VPS EDITION
+ * Made for: deadly
+ */
+
+/* ================= HELPERS ESTETICI ================= */
+const decor = {
+  head: "╔════════════════════╗",
+  foot: "╚════════════════════╝",
+  star: "⭐",
+  music: "🎵",
+  video: "🎬",
+  time: "⏱️",
+  views: "👁️",
+  link: "🔗"
 };
 
-/* ================= DOWNLOAD LOGIC ================= */
+/* ================= FUNZIONE DOWNLOAD CORE ================= */
 function downloadMedia(url, output, isAudio = true) {
   return new Promise((resolve, reject) => {
-    // Argomenti ottimizzati per Termux + FFmpeg
-    let args = isAudio 
-      ? ["-f", "bestaudio", "--extract-audio", "--audio-format", "mp3", "--audio-quality", "0", "-o", output, url]
-      : ["-f", "best[ext=mp4]/best", "--merge-output-format", "mp4", "-o", output, url];
+    // Usiamo --js-runtime quickjs come concordato per evitare i WARNING
+    let args = [
+      "--js-runtime", "quickjs",
+      "--no-playlist",
+      "--no-warnings",
+      "-o", output,
+      url
+    ];
+
+    if (isAudio) {
+      args.splice(4, 0, "-f", "bestaudio", "--extract-audio", "--audio-format", "mp3", "--audio-quality", "0");
+    } else {
+      args.splice(4, 0, "-f", "best[ext=mp4]/best", "--merge-output-format", "mp4");
+    }
 
     const proc = spawn("yt-dlp", args);
+    
     let stderr = "";
+    proc.stderr.on("data", (data) => stderr += data.toString());
 
-    proc.stderr.on("data", d => stderr += d.toString());
-    proc.on("close", code => {
-      if (code !== 0) return reject(stderr);
-      resolve(output);
+    proc.on("close", (code) => {
+      if (code === 0) resolve(output);
+      else reject(stderr);
     });
   });
 }
 
-/* ================= MAIN HANDLER ================= */
+/* ================= HANDLER PRINCIPALE ================= */
 const handler = async (m, { conn, text, command }) => {
-  // 1. Gestione Ricerca
+  
+  // 1. RICERCA E INVIO MENU (Comando principale: .play)
   if (command === "play") {
-    if (!text) return conn.reply(m.chat, "💡 *Esempio:* .play Peaches Justin Bieber", m);
+    if (!text) return m.reply(`❌ *Uso corretto:* .play <titolo o link>`);
 
     const search = await yts(text);
-    const vid = search.videos[0];
-    if (!vid) return conn.reply(m.chat, "❌ Video non trovato.", m);
+    const v = search.videos[0];
+    if (!v) return m.reply("❌ Non ho trovato nulla su YouTube.");
 
-    const caption = [
-      styles.title(vid.title),
-      "",
-      styles.info("⏱ Durata", vid.timestamp),
-      styles.info("👁️ Views", vid.views.toLocaleString()),
-      styles.info("📅 Caricato", vid.ago),
-      styles.info("🔗 Link", vid.url),
-      "",
-      "📥 *Scegli il formato desiderato qui sotto:*",
-      styles.divider
-    ].join("\n");
+    let caption = `      ${decor.head}\n`;
+    caption += `  ${decor.star} *VAREBOT PLAYER* ${decor.star}\n`;
+    caption += `      ${decor.foot}\n\n`;
+    caption += `📝 *Titolo:* ${v.title}\n`;
+    caption += `${decor.time} *Durata:* ${v.timestamp}\n`;
+    caption += `${decor.views} *Views:* ${v.views.toLocaleString()}\n`;
+    caption += `${decor.link} *Link:* ${v.url}\n\n`;
+    caption += `*Scegli il formato che preferisci:*`;
 
-    // Invio con Bottoni (Nota: Assicurati che la tua versione di Baileys supporti i buttons)
+    // Bottoni (Assicurati che la tua versione di Baileys/VareBot li supporti)
     return await conn.sendMessage(m.chat, {
-      image: { url: vid.thumbnail },
+      image: { url: v.thumbnail },
       caption: caption,
-      footer: "VareBot Music Downloader",
+      footer: "Powered by yt-dlp & QuickJS",
       buttons: [
-        { buttonId: `.playaudio ${vid.url}`, buttonText: { displayText: "🎵 AUDIO (MP3)" }, type: 1 },
-        { buttonId: `.playvideo ${vid.url}`, buttonText: { displayText: "🎬 VIDEO (MP4)" }, type: 1 }
+        { buttonId: `.playaudio ${v.url}`, buttonText: { displayText: `${decor.music} AUDIO MP3` }, type: 1 },
+        { buttonId: `.playvideo ${v.url}`, buttonText: { displayText: `${decor.video} VIDEO MP4` }, type: 1 }
       ],
       headerType: 4
     }, { quoted: m });
   }
 
-  // 2. Gestione Download Effettivo
+  // 2. LOGICA DOWNLOAD (playaudio o playvideo)
   const isAudio = command.includes("audio");
   const url = text.trim();
-  if (!url.startsWith("http")) return; // Protezione se l'utente scrive male
+  if (!url.startsWith("http")) return; // Ignora se non è un link passato dai bottoni
 
-  const statusMsg = await conn.reply(m.chat, `⏳ *Elaborazione ${isAudio ? 'Audio' : 'Video'}...* \nAttendi un istante.`, m);
+  await conn.sendMessage(m.chat, { react: { text: "⏳", key: m.key } });
   
-  const tmpDir = os.tmpdir();
-  const fileName = `vare_${Date.now()}.${isAudio ? 'mp3' : 'mp4'}`;
-  const filePath = path.join(tmpDir, fileName);
+  const tmpFile = path.join(os.tmpdir(), `vare_${Date.now()}.${isAudio ? 'mp3' : 'mp4'}`);
 
   try {
-    await downloadMedia(url, filePath, isAudio);
+    await downloadMedia(url, tmpFile, isAudio);
 
     if (isAudio) {
       await conn.sendMessage(m.chat, {
-        audio: { url: filePath },
+        audio: fs.readFileSync(tmpFile),
         mimetype: "audio/mpeg",
-        fileName: fileName,
-        ptt: false // Imposta a true se lo vuoi come nota vocale
+        fileName: `${Date.now()}.mp3`
       }, { quoted: m });
     } else {
       await conn.sendMessage(m.chat, {
-        video: { url: filePath },
+        video: fs.readFileSync(tmpFile),
         mimetype: "video/mp4",
-        fileName: fileName,
         caption: "✅ Ecco il tuo video!"
       }, { quoted: m });
     }
+    
+    await conn.sendMessage(m.chat, { react: { text: "✅", key: m.key } });
+
   } catch (e) {
-    console.error(e);
-    await conn.reply(m.chat, "❌ Errore durante la conversione. Verifica il link.", m);
+    console.error("ERRORE DOWNLOAD:", e);
+    await conn.reply(m.chat, "❌ *Errore nel download!*\nYouTube potrebbe aver bloccato la richiesta. Prova tra poco.", m);
+    await conn.sendMessage(m.chat, { react: { text: "❌", key: m.key } });
   } finally {
-    // Pulizia file per non intasare Termux
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    // Pulizia file temporaneo
+    if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
   }
 };
 
 handler.command = ["play", "playaudio", "playvideo"];
 handler.tags = ["downloader"];
-handler.help = ["play <titolo/link>"];
+handler.help = ["play"];
 
 export default handler;
