@@ -1,3 +1,5 @@
+import fs from "fs"
+
 let handler = async (m, { conn, args, usedPrefix, command }) => {
 
 let who = m.sender
@@ -29,7 +31,7 @@ Seleziona la puntata 👇
 `.trim()
 
 return conn.sendMessage(m.chat,{
-image:{ url:"https://upload.wikimedia.org/wikipedia/commons/0/0c/Snai_logo.png"},
+image: fs.readFileSync("./media/snai.png"),
 caption,
 footer:"⚽ Sistema Scommesse",
 buttons,
@@ -51,11 +53,11 @@ const squadre = [
 ]
 
 let casa = squadre[Math.floor(Math.random()*squadre.length)]
-let trasf = squadre.filter(s=>s!==casa)[Math.floor(Math.random()*(squadre.length-1))]
+let trasf = squadre.filter(s => s !== casa)[Math.floor(Math.random()*(squadre.length-1))]
 
-// QUOTE
+// QUOTA
 let quota = (Math.random()*(4-1.5)+1.5).toFixed(2)
-let vincita = Math.floor(bet*quota)
+let vincita = Math.floor(bet * quota)
 
 user.euro -= bet
 
@@ -64,7 +66,7 @@ let matchImage = `https://dummyimage.com/900x500/111/ffffff&text=${encodeURIComp
 
 // TICKET
 await conn.sendMessage(m.chat,{
-image:{ url:matchImage },
+image:{ url: matchImage },
 caption:`
 🎫 *BIGLIETTO CONFERMATO*
 
@@ -122,7 +124,7 @@ let g2 = Math.floor(Math.random()*4)
 
 if(win){
 
-if(g1<=g2) g1=g2+1
+if(g1<=g2) g1 = g2+1
 
 user.euro += vincita
 
@@ -142,7 +144,7 @@ mentions:[who]
 
 }else{
 
-if(g2<=g1) g2=g1+1
+if(g2<=g1) g2 = g1+1
 
 await conn.sendMessage(m.chat,{
 text:`
