@@ -1,67 +1,52 @@
-import fetch from 'node-fetch'
+const handler = async (m, { conn, text }) => {
 
-const handler = async (m, { conn }) => {
-  if (!m.isGroup)
-    return m.reply('⚠️ Questo comando può essere usato solo nei gruppi.');
+if (!m.isGroup)
+return m.reply('❌ Questo comando funziona solo nei gruppi.')
 
-  let who = m.mentionedJid[0] || (m.quoted ? m.quoted.sender : null);
-  if (!who)
-    return m.reply('⚠️ Devi taggare l’utente a cui revocare il MODERATOR.');
+let who = m.mentionedJid?.[0] || m.quoted?.sender || ''
 
-  const user = global.db.data.users[who];
-  if (!user)
-    return m.reply('❌ Questo utente non esiste nel database.');
+if (!who && text) {
+let number = text.replace(/\D/g, '')
+if (number.length >= 8) who = number + '@s.whatsapp.net'
+}
 
-  // ✅ Controlla se è MOD nel gruppo
-  if (!user.premium || user.premiumGroup !== m.chat)
-    return m.reply('ℹ️ Questo utente non è un MODERATOR in questo gruppo.');
+if (!who)
+return m.reply('❌ Devi taggare o rispondere all’utente.')
 
-  // 🚫 Revoca MOD solo nel gruppo
-  user.premium = false;
-  delete user.premiumGroup; // rimuove la proprietà del gruppo
+const user = global.db.data.users[who]
 
-  // 📸 Thumbnail profilo
-  let thumb;
-  try {
-    const ppUrl = await conn.profilePictureUrl(who, 'image');
-    const res = await fetch(ppUrl);
-    thumb = await res.buffer();
-  } catch {
-    try {
-      const res = await fetch('https://i.ibb.co/3Fh9V6p/avatar-contact.png');
-      thumb = await res.buffer();
-    } catch {
-      thumb = null;
-    }
-  }
+if (!user || !user.premium || user.premiumGroup !== m.chat) {
+return m.reply(`@${who.split('@')[0]} non è moderatore in questo gruppo.`, null, { mentions: [who] })
+}
 
-  const name = '@' + who.split('@')[0];
+user.premium = false
+delete user.premiumGroup
 
-  const caption = `
-╔═[ 𝐍𝚵𝑿𝐒𝐔𝐒 𝚩𝚯𝐓 ]═╗
-  🛡️ 𝐌𝐎𝐃 𝐑𝐄𝐕𝐎𝐂𝐀𝐓𝐎 🛡️
-╚═══════════════╝
+let thumbnail = null
 
-👤 Utente: ${name}
-⚡ Revocato solo in questo gruppo
-♾️ Per sempre 
-`.trim();
+try {
+const pp = await conn.profilePictureUrl(who, 'image')
+const res = await fetch(pp)
+thumbnail = Buffer.from(await res.arrayBuffer())
+} catch {}
 
-  await conn.sendMessage(
-    m.chat,
-    {
-      text: caption,
-      mentions: [who],
-      contextInfo: thumb ? { jpegThumbnail: thumb } : undefined
-    },
-    { quoted: m }
-  );
-};
+await conn.sendMessage(m.chat, {
+text: `@${who.split('@')[0]} non è più moderatore di questo gruppo.`,
+contextInfo: {
+mentionedJid: [who],
+externalAdReply: {
+title: '🚫 Moderatore rimosso',
+thumbnail: thumbnail
+}
+}
+}, { quoted: m })
 
-handler.help = ['delmod @user'];
-handler.tags = ['group'];
-handler.command = ['delmod'];
-handler.group = true;
-handler.owner = true;
+}
 
-export default handler;
+handler.help = ['delmod @user']
+handler.tags = ['group']
+handler.command = ['delmod']
+handler.group = true
+handler.rowner = true
+
+export default handler
