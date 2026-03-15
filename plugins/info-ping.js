@@ -36,30 +36,18 @@ let handler = async (m, { conn, usedPrefix }) => {
     const nodeVer = process.version;
 
  const textMsg =`
-╔═══〔 ⚙️ 𝑺𝑻𝑨𝑻𝑶 ⚙️ 〕═══╗
-
-╭─❖ 「 📡 PERFORMANCE 」 ❖─╮
-│ ⚡ Ping        : ${speed} ms
-│ 🕒 Uptime      : ${uptimeStr}
-╰───────────────╯
-
-╭─❖ 「 📅 ATTIVAZIONE 」 ❖─╮
-│ 🟢 Attivo : ${activationTime}
-╰───────────────╯
-
-╭─❖ 「 👑 OWNER 」 ❖─╮
-│ 𝕯𝖊ⱥ𝖉𝖑𝐲
-╰───────────╯
-
-╚═══════════════╝
+⚡ *_Ping_* : ${speed} ms
+🕒 *_Uptime_* : ${uptimeStr}
+🟢 *_Attivo_* : ${activationTime}
+👑 *_Owner_* : 𝕯𝖊ⱥ𝖉𝖑𝐲
 `.trim();
 
     await conn.sendMessage(m.chat, {
       text: textMsg,
       footer: "🚀 𝑻𝒖𝒕𝒕𝒊 𝒊 𝒔𝒊𝒔𝒕𝒆𝒎𝒊 𝒐𝒑𝒆𝒓𝒂𝒕𝒊𝒗𝒊 🚀",
       buttons: [
-        { buttonId: usedPrefix + "ping", buttonText: { displayText: "📡 𝐑𝐢𝐟𝐚𝐢 𝐏𝐢𝐧𝐠" }, type: 1 },
-        { buttonId: usedPrefix + "menu", buttonText: { displayText: "📋 𝐌𝐞𝐧𝐮" }, type: 1 }
+        { buttonId: usedPrefix + "ping", buttonText: { displayText: "📡 Rifai ping" }, type: 1 },
+        { buttonId: usedPrefix + "ds", buttonText: { displayText: "🗑️ Ds" }, type: 1 }
       ],
       headerType: 1
     }, { quoted: m });
