@@ -11,12 +11,9 @@ const handler = async (message, { conn, usedPrefix = '.' }) => {
 ┃ ✅ ${usedPrefix}richieste
 ╰━━━━━━━━━━━━━━━━⬣
 
-╭━━━〔 ⚠️ WARN & DISCIPLINA 〕━━━⬣
+╭━━━〔 ⚠️ WARN 〕━━━⬣
 ┃ ⚠️ ${usedPrefix}warn
-┃ 📄 ${usedPrefix}listwarn
 ┃ ✅ ${usedPrefix}unwarn
-┃ ❌ ${usedPrefix}delwarn
-┃ 🔄 ${usedPrefix}resetwarn
 ╰━━━━━━━━━━━━━━━━⬣
 
 ╭━━━〔 🔇 CONTROLLO CHAT 〕━━━⬣
