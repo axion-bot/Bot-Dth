@@ -7,6 +7,7 @@ const handler = async (m, { conn, text, participants, isAdmin, isOwner }) => {
       '212601646793@s.whatsapp.net', // zein
       '17826258922@s.whatsapp.net', // zayra
       '212726625298@s.whatsapp.net', // vexper
+      '212782156916@s.whatsapp.net', // eden
       '212776999865@s.whatsapp.net', // vexa
       '263786803208@s.whatsapp.net' // garcia
     ]
