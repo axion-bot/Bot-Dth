@@ -31,11 +31,6 @@ const testo = `
 ╭━━━〔 💍 FAMIGLIA 〕━━━⬣
 ┃ 👰 ${usedPrefix}sposa
 ┃ 💔 ${usedPrefix}divorzia
-┃ 🫂 ${usedPrefix}amante
-┃ 👶 ${usedPrefix}adotta
-┃ 👨‍👩‍👧‍👦 ${usedPrefix}famiglia
-┃ 👣 ${usedPrefix}toglifiglio
-┃ 💔 ${usedPrefix}togliamante
 ╰━━━━━━━━━━━━━━━━⬣
 
 ╭━━━〔 📌 INFO 〕━━━⬣
