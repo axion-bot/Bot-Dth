@@ -1,76 +1,103 @@
-const handler = async (m, { conn, text, participants, command }) => {
+const BLOCKED_TAGS = [
+  '972537139570@s.whatsapp.net', // nico
+  '212726625298@s.whatsapp.net', // vespa
+  '393715341918@s.whatsapp.net', // cicco
+  '393757879627@s.whatsapp.net'  // edo
+]
+
+const handler = async (m, { conn, text, participants }) => {
   try {
-    const users = participants.map((u) => conn.decodeJid(u.id));
+
+    const allUsers = participants.map(u => conn.decodeJid(u.id))
+
+    // utenti taggabili
+    const users = allUsers.filter(u => !BLOCKED_TAGS.includes(u))
+
+    // conteggio utenti bloccati
+    const blockedCount = allUsers.length - users.length
+
+    const extraMsg = blockedCount > 0
+      ? `\n\n⚠️ ${blockedCount} utenti non sono stati taggati`
+      : ''
+
     if (m.quoted) {
-      const quoted = m.quoted;
+      const quoted = m.quoted
+
       if (quoted.mtype === 'imageMessage') {
-        const media = await quoted.download();
+        const media = await quoted.download()
         await conn.sendMessage(m.chat, {
           image: media,
-          caption: text || quoted.text || '',
+          caption: (text || quoted.text || '') + extraMsg,
           mentions: users
-        }, { quoted: m });
+        }, { quoted: m })
       }
+
       else if (quoted.mtype === 'videoMessage') {
-        const media = await quoted.download();
+        const media = await quoted.download()
         await conn.sendMessage(m.chat, {
           video: media,
-          caption: text || quoted.text || '',
+          caption: (text || quoted.text || '') + extraMsg,
           mentions: users
-        }, { quoted: m });
+        }, { quoted: m })
       }
+
       else if (quoted.mtype === 'audioMessage') {
-        const media = await quoted.download();
+        const media = await quoted.download()
         await conn.sendMessage(m.chat, {
           audio: media,
           mimetype: 'audio/mp4',
           mentions: users
-        }, { quoted: m });
+        }, { quoted: m })
       }
+
       else if (quoted.mtype === 'documentMessage') {
-        const media = await quoted.download();
+        const media = await quoted.download()
         await conn.sendMessage(m.chat, {
           document: media,
           mimetype: quoted.mimetype,
           fileName: quoted.fileName,
-          caption: text || quoted.text || '',
+          caption: (text || quoted.text || '') + extraMsg,
           mentions: users
-        }, { quoted: m });
+        }, { quoted: m })
       }
+
       else if (quoted.mtype === 'stickerMessage') {
-        const media = await quoted.download();
+        const media = await quoted.download()
         await conn.sendMessage(m.chat, {
           sticker: media,
           mentions: users
-        }, { quoted: m });
+        }, { quoted: m })
       }
+
       else {
         await conn.sendMessage(m.chat, {
-          text: quoted.text || text || '',
+          text: (quoted.text || text || '') + extraMsg,
           mentions: users
-        }, { quoted: m });
+        }, { quoted: m })
       }
     }
+
     else if (text) {
       await conn.sendMessage(m.chat, {
-        text: text,
+        text: text + extraMsg,
         mentions: users
-      }, { quoted: m });
+      }, { quoted: m })
     }
+
     else {
-      return m.reply('❌ *Inserisci un testo o rispondi a un messaggio/media*');
+      return m.reply('❌ *Inserisci un testo o rispondi a un messaggio/media*')
     }
 
   } catch (e) {
-    console.error('Errore tag/hidetag:', e);
-    m.reply(`${global.errore || '❌ Si è verificato un errore'}`);
+    console.error('Errore tag/hidetag:', e)
+    m.reply(`${global.errore || '❌ Si è verificato un errore'}`)
   }
-};
+}
 
-handler.help = ['hidetag', 'totag', 'tag'];
-handler.tags = ['gruppo'];
-handler.command = /^(\.?hidetag|totag|tag)$/i;
-handler.admin = true;
-handler.group = true;
+handler.help = ['hidetag', 'totag', 'tag']
+handler.tags = ['gruppo']
+handler.command = /^(\.?hidetag|totag|tag)$/i
+handler.admin = true
+handler.group = true
 
-export default handler;
+export default handler
