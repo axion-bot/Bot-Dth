@@ -1,99 +1,76 @@
 const BLOCKED_NUMBERS = [
   '972537139570', // nico
   '393715341918', // cicco
-  '212726625298', // vespa
   '393757879627'  // edo
 ]
 
 const handler = async (m, { conn, text, participants }) => {
   try {
-
-    const allUsers = participants.map(u => conn.decodeJid(u.id))
-
+    // 1. Recuperiamo tutti i partecipanti e filtriamo i bloccati
+    const allUsers = participants.map(p => conn.decodeJid(p.id))
     const users = allUsers.filter(jid => {
       const number = jid.split('@')[0]
       return !BLOCKED_NUMBERS.includes(number)
     })
 
     const blockedCount = allUsers.length - users.length
+    
+    // 2. Prepariamo la nota sugli esclusi da aggiungere al testo
+    const avvisoEsclusi = blockedCount > 0 ? `\n\n⚠️ _${blockedCount} utenti esclusi dal tag._` : ''
 
-    const message = text || '📢 Tag generale'
-
+    // 3. Gestione se si risponde a un messaggio (Media o Testo)
     if (m.quoted) {
-      const quoted = m.quoted
+      const q = m.quoted
+      const mime = q.mimetype || ''
+      const messageType = q.mtype.replace('Message', '') // estrae 'image', 'video', 'audio', ecc.
 
-      if (quoted.mtype === 'imageMessage') {
-        const media = await quoted.download()
-        await conn.sendMessage(m.chat,{
-          image: media,
-          caption: message,
-          mentions: users
-        },{ quoted:m })
-      }
+      // Se il messaggio quotato è un media (foto, video, audio, documento, sticker)
+      if (/image|video|audio|document|sticker/.test(q.mtype)) {
+        const media = await q.download()
+        
+        // Prepariamo la didascalia: priorità al testo scritto ora, poi alla didascalia originale
+        let caption = (text || q.text || q.caption || '').trim()
+        caption += avvisoEsclusi
 
-      else if (quoted.mtype === 'videoMessage') {
-        const media = await quoted.download()
-        await conn.sendMessage(m.chat,{
-          video: media,
-          caption: message,
-          mentions: users
-        },{ quoted:m })
-      }
+        let sendOptions = {
+          [messageType]: media,
+          mentions: users,
+          caption: caption,
+          mimetype: q.mimetype,
+          fileName: q.fileName,
+          ptt: q.ptt // mantiene il formato nota vocale se era un audio PTT
+        }
 
-      else if (quoted.mtype === 'audioMessage') {
-        const media = await quoted.download()
-        await conn.sendMessage(m.chat,{
-          audio: media,
-          mimetype:'audio/mp4',
-          mentions: users
-        },{ quoted:m })
-      }
+        // Gli audio e gli sticker non supportano la caption/didascalia
+        if (messageType === 'audio' || messageType === 'sticker') {
+          delete sendOptions.caption
+          // Se è un audio, inviamo comunque l'avviso esclusi come messaggio separato subito dopo
+          await conn.sendMessage(m.chat, sendOptions, { quoted: m })
+          if (avvisoEsclusi) await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
+          return
+        }
 
-      else if (quoted.mtype === 'documentMessage') {
-        const media = await quoted.download()
-        await conn.sendMessage(m.chat,{
-          document: media,
-          mimetype: quoted.mimetype,
-          fileName: quoted.fileName,
-          caption: message,
-          mentions: users
-        },{ quoted:m })
-      }
-
-      else if (quoted.mtype === 'stickerMessage') {
-        const media = await quoted.download()
-        await conn.sendMessage(m.chat,{
-          sticker: media,
-          mentions: users
-        },{ quoted:m })
-      }
-
-      else {
-        await conn.sendMessage(m.chat,{
-          text: message,
-          mentions: users
-        },{ quoted:m })
-      }
-
-    } else {
-
-      await conn.sendMessage(m.chat,{
-        text: message,
-        mentions: users
-      },{ quoted:m })
-
+        return await conn.sendMessage(m.chat, sendOptions, { quoted: m })
+      } 
+      
+      // Se si risponde a un messaggio di testo
+      let testoSemplice = (text || q.text || '').trim()
+      testoSemplice += avvisoEsclusi
+      return await conn.sendMessage(m.chat, { text: testoSemplice, mentions: users }, { quoted: m })
     }
 
-    // messaggio counter
-    if (blockedCount > 0) {
-      await conn.sendMessage(m.chat,{
-        text:`⚠️ ${blockedCount} utenti autorizzati non sono stati taggati`
-      })
-    }
+    // 4. Se NON si risponde a nulla (Tag semplice nel gruppo)
+    let messaggioDiretto = (text || '📢 Tag Generale').trim()
+    messaggioDiretto += avvisoEsclusi
+
+    await conn.sendMessage(m.chat, {
+      text: messaggioDiretto,
+      mentions: users
+    }, { quoted: m })
 
   } catch (e) {
-    console.error('Errore tag:', e)
-    m.reply('❌ Errore nel comando tag')
+    console.error(e)
+    m.reply('❌ Errore nel processare il tag media')
   }
 }
 
