@@ -34,9 +34,17 @@ async function sposa(m, conn, users, usedPrefix) {
     if (!users[target]) users[target] = {}
 
     if (users[sender].sposato)
-        throw `💍 Sei già sposato con ${tagUser(users[sender].coniuge)}`
+        throw `💍 *SEI GIÀ SPOSATO*
+
+❤️ Coniuge:
+${tagUser(users[sender].coniuge)}
+
+Usa *.divorzia* prima.`
+
     if (users[target].sposato)
-        throw `💍 ${tagUser(target)} è già sposato`
+        throw `💍 *PERSONA GIÀ OCCUPATA*
+
+${tagUser(target)} è già sposato/a.`
 
     if (proposals[sender] || proposals[target])
         throw '⏳ C’è già una proposta in corso'
@@ -50,7 +58,7 @@ async function sposa(m, conn, users, usedPrefix) {
 
 ${tagUser(sender)} vuole sposare ${tagUser(target)} 💍
 
-💬 Rispondi con:
+Rispondi:
 ✔️ *SI* per accettare  
 ❌ *NO* per rifiutare`,
         mentions: [sender, target]
@@ -75,9 +83,17 @@ async function amante(m, conn, users, usedPrefix) {
     if (!users[target]) users[target] = {}
 
     if (users[sender].amante)
-        throw `🔥 Hai già un amante: ${tagUser(users[sender].amante)}`
+        throw `🔥 *AMANTE GIÀ PRESENTE*
+
+Il tuo amante:
+${tagUser(users[sender].amante)}
+
+Usa *.togliamante* prima.`
+
     if (users[target].amante)
-        throw `🔥 ${tagUser(target)} ha già un amante`
+        throw `🔥 *PERSONA GIÀ OCCUPATA*
+
+${tagUser(target)} ha già un amante 😏`
 
     if (lovers[sender] || lovers[target])
         throw '⏳ C’è già una proposta amante in corso'
@@ -91,7 +107,7 @@ async function amante(m, conn, users, usedPrefix) {
 
 ${tagUser(sender)} vuole che ${tagUser(target)} diventi il suo amante 😏
 
-💬 Rispondi con:
+Rispondi:
 ✔️ *SI* per accettare  
 ❌ *NO* per rifiutare`,
         mentions: [sender, target]
@@ -117,7 +133,6 @@ function togliAmante(m, users) {
     const exJid = user.amante
 
     user.amante = null
-
     if (ex) ex.amante = null
 
     m.reply(`💔 Tu e ${tagUser(exJid)} non siete più amanti`, null, {
@@ -135,7 +150,9 @@ async function adotta(m, conn, users, usedPrefix) {
     if (!users[target]) users[target] = {}
 
     if (users[target].genitori?.length)
-        throw '❌ Questa persona ha già dei genitori'
+        throw `👨‍👩‍👧 *ADOZIONE IMPOSSIBILE*
+
+${tagUser(target)} ha già dei genitori.`
 
     adoptions[target] = sender
 
@@ -145,7 +162,7 @@ async function adotta(m, conn, users, usedPrefix) {
 
 ${tagUser(sender)} vuole adottare ${tagUser(target)} 💖
 
-💬 Rispondi con:
+Rispondi:
 ✔️ *SI* per accettare  
 ❌ *NO* per rifiutare`,
         mentions: [sender, target]
@@ -202,6 +219,7 @@ function divorzia(m, users) {
     if (!user.sposato) throw '❌ Non sei sposato'
 
     const ex = users[user.coniuge]
+
     user.sposato = false
     user.coniuge = null
 
@@ -213,13 +231,41 @@ function divorzia(m, users) {
     m.reply('💔 Matrimonio terminato. Ora siete divorziati.')
 }
 
+/* ================= 👶 TOGLI FIGLIO ================= */
+function togliFiglio(m, users) {
+    const sender = m.sender
+    const target = m.mentionedJid?.[0] || m.quoted?.sender
+
+    if (!target) throw 'Usa: .toglifiglio @figlio'
+
+    const user = users[sender]
+    const child = users[target]
+
+    if (!user.figli || !user.figli.includes(target))
+        throw '❌ Questa persona non è tuo figlio.'
+
+    user.figli = user.figli.filter(f => f !== target)
+
+    if (child?.genitori)
+        child.genitori = child.genitori.filter(g => g !== sender)
+
+    m.reply(
+`🧾 *ADOZIONE REVOCATA*
+
+👤 Genitore: ${tagUser(sender)}
+👶 Figlio: ${tagUser(target)}
+
+💔 Non fate più parte della stessa famiglia.`,
+null,
+{ mentions: [sender, target] })
+}
+
 /* ================= 🔒 CONFERME ================= */
 handler.before = async (m, { conn }) => {
     if (!m.text) return
     const txt = m.text.toLowerCase().trim()
     const users = global.db.data.users
 
-    /* MATRIMONIO */
     if (proposals[m.sender]) {
         const from = proposals[m.sender]
         const to = m.sender
@@ -246,7 +292,6 @@ handler.before = async (m, { conn }) => {
         }
     }
 
-    /* AMANTE */
     if (lovers[m.sender]) {
         const from = lovers[m.sender]
         const to = m.sender
@@ -271,7 +316,6 @@ handler.before = async (m, { conn }) => {
         }
     }
 
-    /* ADOZIONE */
     if (adoptions[m.sender]) {
         const from = adoptions[m.sender]
         const to = m.sender
@@ -300,7 +344,7 @@ function tagUser(jid) {
     return '@' + jid.split('@')[0]
 }
 
-handler.command = ['sposa', 'divorzia', 'adotta', 'famiglia', 'toglifiglio', 'amante', 'togliamante']
+handler.command = ['sposa','divorzia','adotta','famiglia','toglifiglio','amante','togliamante']
 handler.group = true
 
 export default handler
