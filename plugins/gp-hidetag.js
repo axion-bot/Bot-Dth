@@ -1,32 +1,28 @@
 const BLOCKED_NUMBERS = [
-  '972537139570@s.whatsapp.net', // nico
-  '393715341918@s.whatsapp.net', // cicco
-  '393516908130@s.whatsapp.net', // ankush
-  '393757879627@s.whatsapp.net'  // edo
+  '972537139570', // nico
+  '393715341918', // cicco
+  '393516908130', // ankush
+  '393757879627'  // edo
 ]
 
 const handler = async (m, { conn, text, participants }) => {
   try {
-    // 1. Funzione interna per pulire i JID e renderli comparabili
-    const parseJid = (jid) => {
-      if (!jid) return ''
-      return jid.split('@')[0].split(':')[0] + '@s.whatsapp.net'
-    }
+    // 1. Puliamo la lista nera (solo numeri)
+    const blockedList = BLOCKED_NUMBERS.map(num => num.split('@')[0].replace(/[^0-9]/g, ''))
 
-    // 2. Puliamo la lista nera per sicurezza
-    const blockedJids = BLOCKED_NUMBERS.map(id => parseJid(id))
+    // 2. Filtriamo i partecipanti mantenendo l'ID ORIGINALE per il tag
+    const usersToTag = participants
+      .map(p => p.id)
+      .filter(jid => {
+        const number = jid.split('@')[0].split(':')[0] // Estrae il numero pulito
+        return !blockedList.includes(number)
+      })
 
-    // 3. Mappiamo e puliamo i partecipanti del gruppo
-    const allParticipants = participants.map(p => parseJid(p.id || p))
-
-    // 4. FILTRO REALE: Teniamo solo chi NON è nei bloccati
-    const usersToTag = allParticipants.filter(jid => !blockedJids.includes(jid))
-
-    // 5. Calcolo esclusi
-    const blockedCount = allParticipants.length - usersToTag.length
+    // 3. Calcolo esclusi
+    const blockedCount = participants.length - usersToTag.length
     const avvisoEsclusi = `⚠️ _${blockedCount} persone non sono state taggate._`
 
-    // 6. Testo principale
+    // 4. Testo principale
     let mainText = text || (m.quoted && (m.quoted.text || m.quoted.caption)) || '📢 Tag Generale'
 
     // --- LOGICA DI INVIO ---
@@ -39,7 +35,7 @@ const handler = async (m, { conn, text, participants }) => {
 
         let options = {
           [type]: media,
-          mentions: usersToTag, // TAGGA SOLO I FILTRATI
+          mentions: usersToTag, // Tag funzionanti
           mimetype: q.mimetype,
           fileName: q.fileName || 'file'
         }
@@ -51,17 +47,18 @@ const handler = async (m, { conn, text, participants }) => {
       }
     }
 
-    // Invio Testo
+    // Invio Testo con Tag attivi
     await conn.sendMessage(m.chat, { 
       text: mainText, 
-      mentions: usersToTag // TAGGA SOLO I FILTRATI
+      mentions: usersToTag 
     }, { quoted: m })
 
+    // Secondo messaggio per gli esclusi
     await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
 
   } catch (e) {
     console.error(e)
-    m.reply('❌ Errore nel caricamento del tag: ' + e.message)
+    m.reply('❌ Errore: ' + e.message)
   }
 }
 
