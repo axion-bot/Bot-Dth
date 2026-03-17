@@ -1,14 +1,41 @@
-const BLOCKED_NUMBERS = [
-  '972537139570', // nico
-  '393715341918', // cicco
-  '393516908130', // ankush
-  '393757879627'  // edo
+const BLOCKED_JIDS = [
+  '972537139570@s.whatsapp.net', // nico
+  '393715341918@s.whatsapp.net', // cicco
+  '393516908130@s.whatsapp.net', // ankush
+  '393757879627@s.whatsapp.net'  // edo
 ]
+
+function toJid(input) {
+  if (!input) return null
+  input = input.toString().trim().toLowerCase()
+
+  if (input.startsWith('@')) input = input.slice(1)
+  if (input.endsWith('@s.whatsapp.net')) return input
+
+  const num = input.replace(/\D/g, '')
+  return num.length >= 10 ? `${num}@s.whatsapp.net` : null
+}
+
+function extractTargets(m, mentionedJid) {
+  let targets = []
+
+  if (mentionedJid?.length) {
+    targets.push(...mentionedJid)
+  }
+
+  if (m.quoted?.sender) {
+    targets.push(m.quoted.sender)
+  }
+
+  if (m.message?.extendedTextMessage?.contextInfo?.mentionedJid) {
+    targets.push(...m.message.extendedTextMessage.contextInfo.mentionedJid)
+  }
+
+  return [...new Set(targets.map(toJid).filter(Boolean))]
+}
 
 const handler = async (m, { conn, text, participants }) => {
   try {
-    const blockedList = BLOCKED_NUMBERS.map(num => num.replace(/\D/g, ''))
-
     const usersToTag = []
     let blockedCount = 0
 
@@ -16,9 +43,9 @@ const handler = async (m, { conn, text, participants }) => {
       let jid = typeof p === 'string' ? p : p.id
       if (!jid) continue
 
-      let number = jid.split('@')[0].split(':')[0].replace(/\D/g, '')
-
-      if (blockedList.includes(number)) {
+      let baseJid = toJid(jid.split(':')[0])
+      
+      if (BLOCKED_JIDS.includes(baseJid)) {
         blockedCount++
       } else {
         usersToTag.push(jid) 
@@ -26,6 +53,7 @@ const handler = async (m, { conn, text, participants }) => {
     }
 
     let mainText = text || (m.quoted && (m.quoted.text || m.quoted.caption)) || '📢 Tag Generale'
+    
     const avvisoEsclusi = `⚠️ _${blockedCount} persone non sono state taggate._`
 
     if (m.quoted && m.quoted.mtype) {
@@ -46,8 +74,11 @@ const handler = async (m, { conn, text, participants }) => {
         }
 
         await conn.sendMessage(m.chat, options, { quoted: m })
-        
-        return await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
+
+        if (blockedCount > 0) {
+          await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
+        }
+        return
       }
     }
 
@@ -56,7 +87,9 @@ const handler = async (m, { conn, text, participants }) => {
       mentions: usersToTag 
     }, { quoted: m })
 
-    await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
+    if (blockedCount > 0) {
+      await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
+    }
 
   } catch (e) {
     console.error(e)
