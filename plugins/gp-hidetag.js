@@ -7,61 +7,61 @@ const BLOCKED_NUMBERS = [
 
 const handler = async (m, { conn, text, participants }) => {
   try {
-    // 1. Recuperiamo tutti i JID dei partecipanti
-    const allParticipants = participants.map(p => conn.decodeJid(p.id))
+    // 1. Funzione interna per pulire i JID e renderli comparabili
+    const parseJid = (jid) => {
+      if (!jid) return ''
+      return jid.split('@')[0].split(':')[0] + '@s.whatsapp.net'
+    }
 
-    // 2. Filtriamo: teniamo solo chi NON è nella lista nera
-    const usersToTag = allParticipants.filter(jid => !BLOCKED_NUMBERS.includes(jid))
+    // 2. Puliamo la lista nera per sicurezza
+    const blockedJids = BLOCKED_NUMBERS.map(id => parseJid(id))
 
-    // 3. Calcoliamo quanti ne abbiamo esclusi
+    // 3. Mappiamo e puliamo i partecipanti del gruppo
+    const allParticipants = participants.map(p => parseJid(p.id || p))
+
+    // 4. FILTRO REALE: Teniamo solo chi NON è nei bloccati
+    const usersToTag = allParticipants.filter(jid => !blockedJids.includes(jid))
+
+    // 5. Calcolo esclusi
     const blockedCount = allParticipants.length - usersToTag.length
     const avvisoEsclusi = `⚠️ _${blockedCount} persone non sono state taggate._`
 
-    // 4. Testo principale (quello che scrivi o quello del messaggio citato)
+    // 6. Testo principale
     let mainText = text || (m.quoted && (m.quoted.text || m.quoted.caption)) || '📢 Tag Generale'
 
     // --- LOGICA DI INVIO ---
 
-    // Gestione se si risponde a un MEDIA (Immagine, Video, Audio, ecc.)
     if (m.quoted && m.quoted.mtype) {
       const q = m.quoted
       if (/image|video|audio|document|sticker/.test(q.mtype)) {
         const media = await q.download()
         const type = q.mtype.replace('Message', '')
-        
+
         let options = {
           [type]: media,
-          mentions: usersToTag,
+          mentions: usersToTag, // TAGGA SOLO I FILTRATI
           mimetype: q.mimetype,
           fileName: q.fileName || 'file'
         }
 
-        // Se non è audio/sticker, aggiungiamo la didascalia con il testo
-        if (type !== 'audio' && type !== 'sticker') {
-          options.caption = mainText
-        }
+        if (type !== 'audio' && type !== 'sticker') options.caption = mainText
 
-        // Primo invio: Il Media con i tag
         await conn.sendMessage(m.chat, options, { quoted: m })
-        
-        // Secondo invio: L'avviso separato
         return await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
       }
     }
 
-    // Gestione se è solo TESTO
-    // Primo invio: Messaggio principale con i tag
+    // Invio Testo
     await conn.sendMessage(m.chat, { 
       text: mainText, 
-      mentions: usersToTag 
+      mentions: usersToTag // TAGGA SOLO I FILTRATI
     }, { quoted: m })
 
-    // Secondo invio: Avviso esclusi
     await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
 
   } catch (e) {
     console.error(e)
-    m.reply('❌ Errore nel plugin tag')
+    m.reply('❌ Errore nel caricamento del tag: ' + e.message)
   }
 }
 
