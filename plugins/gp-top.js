@@ -1,21 +1,19 @@
-// Plug-in fatto da Blood
-
-// Database globale
-globalThis.archivioMessaggi = globalThis.archivioMessaggi || {};
-
 let handler = async (m, { conn, command }) => {
-  let chatId = m.chat;
-  let dati = globalThis.archivioMessaggi[chatId];
+  // Accediamo ai dati della chat corrente nel database.json
+  let chat = global.db.data.chats[m.chat]
+  if (!chat) return 
+  
+  // Recuperiamo l'archivio (o creiamolo se vuoto)
+  let dati = chat.archivioMessaggi || { totali: 0, utenti: {} }
 
   if (!dati || dati.totali === 0) {
     return m.reply("📊 *CLASSIFICA MESSAGGI*\n\nNessun messaggio registrato oggi in questo gruppo.");
   }
 
-  // Determina quanti utenti mostrare
-  let limite = 3;
-  if (command === "top5") limite = 5;
-  if (command === "top10") limite = 10;
+  // Configurazione limite visualizzazione
+  let limite = command === "top5" ? 5 : (command === "top10" ? 10 : 3);
 
+  // Ordiniamo gli utenti per numero di messaggi
   let classifica = Object.entries(dati.utenti)
     .sort((a, b) => b[1].conteggio - a[1].conteggio)
     .slice(0, limite);
@@ -24,94 +22,82 @@ let handler = async (m, { conn, command }) => {
 
   let testo = `╭━━━〔 📊 *CLASSIFICA* 📊 〕━━━⬣\n`;
   testo += `┃ 💬 Messaggi totali: *${dati.totali}*\n`;
-  testo += `┃ 📅 Aggiornata in tempo reale\n`;
+  testo += `┃ 📅 Database: . /database.json\n`;
   testo += `╰━━━━━━━━━━━━━━━━━━⬣\n\n`;
   testo += `🏆 *TOP ${limite} DI OGGI*\n\n`;
 
-  let menzioni = [];
+  let menzioni = classifica.map(u => u[0]);
 
   classifica.forEach((u, i) => {
-    let id = u[0];
-    let datiUtente = u[1];
-    menzioni.push(id);
-    testo += `${medaglie[i]} @${id.split("@")[0]}\n`;
-    testo += `   ✉️ ${datiUtente.conteggio} messaggi\n\n`;
+    testo += `${medaglie[i]} @${u[0].split("@")[0]}\n`;
+    testo += `   ✉️ ${u[1].conteggio} messaggi\n\n`;
   });
 
   testo += `──────────────────\n`;
   testo += `⏳ _Il conteggio si azzera a mezzanotte_`;
 
-  await conn.sendMessage(chatId, {
-    text: testo,
-    mentions: menzioni,
-    buttons: [
-      { buttonId: '.top5', buttonText: { displayText: '📊 TOP 5' }, type: 1 },
-      { buttonId: '.top10', buttonText: { displayText: '🏆 TOP 10' }, type: 1 }
-    ],
-    headerType: 1
-  }, { quoted: m });
+  await conn.sendMessage(m.chat, { text: testo, mentions: menzioni }, { quoted: m });
 };
 
-// --- REGISTRAZIONE MESSAGGI ---
+// --- LOGICA DI REGISTRAZIONE (Prima di ogni comando) ---
 handler.before = async function (m) {
+  // Filtri: No chat private, no messaggi dai bot
   if (!m.chat || !m.text || m.isBaileys || !m.isGroup) return; 
 
-  let chat = m.chat;
-  let user = m.sender;
-
-  if (!globalThis.archivioMessaggi[chat]) {
-    globalThis.archivioMessaggi[chat] = { totali: 0, utenti: {} };
+  // Inizializzazione sicura nel database.json
+  if (!global.db.data.chats[m.chat]) global.db.data.chats[m.chat] = {}
+  if (!global.db.data.chats[m.chat].archivioMessaggi) {
+    global.db.data.chats[m.chat].archivioMessaggi = { totali: 0, utenti: {} };
   }
 
-  globalThis.archivioMessaggi[chat].totali += 1;
+  let archivio = global.db.data.chats[m.chat].archivioMessaggi;
 
-  let nome = m.pushName || 'Utente';
-  if (!globalThis.archivioMessaggi[chat].utenti[user]) {
-    globalThis.archivioMessaggi[chat].utenti[user] = { nome: nome, conteggio: 0 };
+  // Incremento contatore globale chat
+  archivio.totali += 1;
+
+  // Incremento contatore utente
+  if (!archivio.utenti[m.sender]) {
+    archivio.utenti[m.sender] = { conteggio: 0 };
   }
-  globalThis.archivioMessaggi[chat].utenti[user].conteggio += 1;
+  archivio.utenti[m.sender].conteggio += 1;
+  
+  // Il sistema 'autosaver' del tuo bot scriverà le modifiche su database.json automaticamente
 };
 
-// --- AUTOMAZIONE MEZZANOTTE ---
+// --- RESET AUTOMATICO (Mezzanotte) ---
 setInterval(async () => {
   let now = new Date();
   if (now.getHours() === 0 && now.getMinutes() === 0) {
+    let chats = global.db.data.chats;
 
-    let gruppi = Object.keys(globalThis.archivioMessaggi);
-
-    for (let gid of gruppi) {
-      if (!globalThis.conn) continue;
-
-      let dati = globalThis.archivioMessaggi[gid];
+    for (let jid in chats) {
+      let dati = chats[jid].archivioMessaggi;
       if (!dati || dati.totali === 0) continue;
 
       let classifica = Object.entries(dati.utenti)
         .sort((a, b) => b[1].conteggio - a[1].conteggio)
         .slice(0, 3);
 
-      let testo = `╭━━━〔 🏆 *FINALE* 🏆 〕━⬣\n`;
-      testo += `┃ 📊 Totale messaggi: *${dati.totali}*\n`;
+      let testo = `╭━━━〔 🏆 *FINALE GIORNALIERO* 🏆 〕━⬣\n`;
+      testo += `┃ 📊 Messaggi oggi: *${dati.totali}*\n`;
       testo += `╰━━━━━━━━━━━━━━━━━━⬣\n\n`;
 
+      let menzioni = classifica.map(u => u[0]);
       const medaglie = ['🥇','🥈','🥉'];
-      let menzioni = [];
 
       classifica.forEach((u, i) => {
-        menzioni.push(u[0]);
         testo += `${medaglie[i]} @${u[0].split("@")[0]} — ${u[1].conteggio} messaggi\n`;
       });
 
-      testo += `\nConteggio Azzerato`;
+      testo += `\n🔄 Database azzerato. Si ricomincia!`;
 
-      await globalThis.conn.sendMessage(gid, {
-        text: testo,
-        mentions: menzioni
-      });
+      if (global.conn) await global.conn.sendMessage(jid, { text: testo, mentions: menzioni });
 
-      globalThis.archivioMessaggi[gid] = { totali: 0, utenti: {} };
+      // Svuota i dati nel JSON
+      chats[jid].archivioMessaggi = { totali: 0, utenti: {} };
     }
   }
-}, 60000);
+}, 60000); 
 
 handler.help = ['top','top5','top10'];
 handler.tags = ['strumenti'];
