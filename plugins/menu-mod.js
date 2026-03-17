@@ -9,6 +9,7 @@ const handler = async (message, { conn, usedPrefix = '.' }) => {
 ┃ 🧙‍♂️ ${usedPrefix}tagmod
 ┃ ⚡ ${usedPrefix}pingmod
 ┃ 🚫 ${usedPrefix}delm
+┃ 🗑️ ${usedPrefix}dsmod
 ┃ 💀 ${usedPrefix}nukegp
 ┃ ⚠️ ${usedPrefix}warnmod
 ┃ ✅ ${usedPrefix}unwarnmod
