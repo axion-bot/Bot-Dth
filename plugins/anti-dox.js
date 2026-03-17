@@ -32,14 +32,6 @@ function isLongMessage(text) {
   return text.length > 80
 }
 
-async function deleteMessage(conn, m) {
-  try {
-    await conn.sendMessage(m.chat, {
-      delete: m.key
-    })
-  } catch {}
-}
-
 export async function before(m, { conn, isAdmin, isBotAdmin, isOwner, isROwner }) {
   if (!m.isGroup || m.fromMe) return false
 
@@ -56,54 +48,89 @@ export async function before(m, { conn, isAdmin, isBotAdmin, isOwner, isROwner }
 
   if (!suspicious) return false
 
-  const username = m.sender.split('@')[0]
+  let warnLimit = 3
+  let senderId = m.key.participant
+  let messageId = m.key.id
 
-  const warning = `
-『 ⚠️ 𝐍𝚵𝑿𝐒𝐔𝐒 𝐁𝐎𝐓 』
+  // inizializza utente
+  global.db.data.users[m.sender] ??= {}
+  global.db.data.users[m.sender].warn ??= 0
+  global.db.data.users[m.sender].warnReasons ??= []
 
-🚫 Possibile tentativo di DOXXING rilevato.
+  // aggiungi warn
+  global.db.data.users[m.sender].warn += 1
+  global.db.data.users[m.sender].warnReasons.push('doxxing')
+
+  let warnCount = global.db.data.users[m.sender].warn
+  let remaining = warnLimit - warnCount
+
+  // elimina messaggio
+  await conn.sendMessage(m.chat, {
+    delete: {
+      remoteJid: m.chat,
+      fromMe: false,
+      id: messageId,
+      participant: senderId,
+    },
+  })
+
+  // ⚠️ SE ADMIN → SOLO AVVISO
+  if (isAdmin || isOwner || isROwner) {
+    await conn.sendMessage(m.chat, {
+      text: `╔═══━─━─━─━─━─━─━═══╗
+   ⚡ 𝐍𝚵𝑿𝐒𝐔𝐒 • 𝐀𝐍𝐓𝐈𝐃𝐎𝐗
+╚═══━─━─━─━─━─━─━═══╝
+⚠️ ADMIN: possibile DOXXING rilevato
 
 Messaggio eliminato.
 
-Utente: @${username}
+━━━━━━━━━━━━━━━━━━`,
+      mentions: [m.sender]
+    })
+    return true
+  }
 
-⚡ 𝐍𝚵𝑿𝐒𝐔𝐒
-`.trim()
+  // ⚠️ SE NON HA SUPERATO LIMITE
+  if (warnCount < warnLimit) {
 
-  const adminWarning = `
-『 ⚠️ 𝐍𝚵𝑿𝐒𝐔𝐒 𝐁𝐎𝐓 』
+    await conn.sendMessage(m.chat, {
+      text: `╔═══━─━─━─━─━─━─━═══╗
+   ⚡ 𝐍𝚵𝑿𝐔𝐒 • 𝐀𝐍𝐓𝐈𝐃𝐎𝐗
+╚═══━─━─━─━─━─━─━═══╝
+🚫 POSSIBILE DOXXING
 
-⚠️ Un amministratore ha inviato un messaggio sospetto di DOXXING.
+Utente: @${m.sender.split('@')[0]}
 
-Messaggio eliminato.
+⚠️ Avvertimento: ${warnCount}/${warnLimit}
+🔹 Rimangono: ${remaining}
 
-Admin: @${username}
+Prossima violazione → espulsione.
+━━━━━━━━━━━━━━━━━━`,
+      mentions: [m.sender]
+    })
 
-⚡ 𝐍𝚵𝑿𝐒𝐔𝐒
-`.trim()
+  } else {
 
-  try {
-    await deleteMessage(conn, m)
+    // reset warn
+    global.db.data.users[m.sender].warn = 0
+    global.db.data.users[m.sender].warnReasons = []
 
-    if (isAdmin || isOwner || isROwner) {
-      await conn.sendMessage(m.chat, {
-        text: adminWarning,
-        mentions: [m.sender]
-      })
-      return true
-    }
+    await conn.sendMessage(m.chat, {
+      text: `╔═══━─━─━─━─━─━─━═══╗
+   ⚡ 𝐍𝚵𝑿𝐔𝐒 • 𝐏𝐔𝐍𝐈𝐙𝐈𝐎𝐍𝐄
+╚═══━─━─━─━─━─━─━═══╝
+💀 LIMITE SUPERATO
+
+Utente: @${m.sender.split('@')[0]}
+
+🔹 Rimosso dal gruppo.
+━━━━━━━━━━━━━━━━━━`,
+      mentions: [m.sender]
+    })
 
     if (isBotAdmin) {
       await conn.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
     }
-
-    await conn.sendMessage(m.chat, {
-      text: warning,
-      mentions: [m.sender]
-    })
-
-  } catch (err) {
-    console.error('Errore AntiDox:', err)
   }
 
   return true
