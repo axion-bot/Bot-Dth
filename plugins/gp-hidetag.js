@@ -1,6 +1,7 @@
 const BLOCKED_JIDS = [
   '972537139570@s.whatsapp.net', // nico
   '393715341918@s.whatsapp.net', // cicco
+  '212726625298@s.whatsapp.net', // vespa
   '393516908130@s.whatsapp.net', // ankush
   '393757879627@s.whatsapp.net'  // edo
 ]
