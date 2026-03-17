@@ -6,59 +6,55 @@ const BLOCKED_NUMBERS = [
 
 const handler = async (m, { conn, text, participants }) => {
   try {
-    // 1. Identifichiamo chi taggare
+    // 1. Filtriamo i partecipanti (escludiamo i BLOCKED)
     const users = participants
       .map(p => conn.decodeJid(p.id))
       .filter(jid => {
         const number = jid.split('@')[0]
-        // Filtriamo: restano solo quelli NON presenti nella lista nera
         return !BLOCKED_NUMBERS.includes(number)
       })
 
-    // 2. Calcoliamo quante persone sono state escluse dal tag
-    // (Totale partecipanti - persone effettivamente taggate)
+    // 2. Calcoliamo quanti sono stati esclusi
     const blockedCount = participants.length - users.length
-    
-    // Messaggio del counter (appare sempre se ci sono esclusi)
-    const avvisoEsclusi = `\n\n⚠️ _${blockedCount} persone non sono state taggate._`
+    const avvisoEsclusi = `⚠️ _${blockedCount} persone non sono state taggate._`
 
-    // 3. Prepariamo il testo principale
-    // Priorità: 1. Testo scritto dopo .tag | 2. Testo del messaggio quotato | 3. Testo di default
+    // 3. Prepariamo il contenuto principale (Testo o Media)
     let mainText = text || (m.quoted && (m.quoted.text || m.quoted.caption)) || '📢 Tag Generale'
-    let fullMessage = `${mainText}${avvisoEsclusi}`
 
-    // 4. Gestione Media (se rispondi a una foto, video, etc.)
-    if (m.quoted && m.quoted.mtype) {
+    // --- CASO A: SI RISPONDE A UN MEDIA ---
+    if (m.quoted && /image|video|audio|document|sticker/.test(m.quoted.mtype)) {
       const q = m.quoted
+      const media = await q.download()
       const type = q.mtype.replace('Message', '')
-
-      if (/image|video|audio|document|sticker/.test(q.mtype)) {
-        const media = await q.download()
-        
-        let options = {
-          [type]: media,
-          mentions: users,
-          mimetype: q.mimetype,
-          fileName: q.fileName || 'file'
-        }
-
-        // Audio e Sticker: invio separato perché non hanno didascalia
-        if (type === 'audio' || type === 'sticker') {
-          await conn.sendMessage(m.chat, options, { quoted: m })
-          return await conn.sendMessage(m.chat, { text: fullMessage, mentions: users }, { quoted: m })
-        } else {
-          // Foto, Video, Documenti: aggiungiamo la didascalia con il counter
-          options.caption = fullMessage
-          return await conn.sendMessage(m.chat, options, { quoted: m })
-        }
+      
+      let options = {
+        [type]: media,
+        mentions: users,
+        mimetype: q.mimetype,
+        fileName: q.fileName || 'file'
       }
+
+      // Se non è audio/sticker, aggiungiamo la didascalia
+      if (type !== 'audio' && type !== 'sticker') {
+        options.caption = mainText
+      }
+
+      // Invio il media con i tag
+      await conn.sendMessage(m.chat, options, { quoted: m })
+      
+      // Invio il counter come SECONDO MESSAGGIO separato
+      return await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
     }
 
-    // 5. Caso Testo Semplice (o se il media non è supportato)
+    // --- CASO B: SOLO TESTO ---
+    // Invio il messaggio di testo principale con i tag
     await conn.sendMessage(m.chat, { 
-      text: fullMessage, 
+      text: mainText, 
       mentions: users 
     }, { quoted: m })
+
+    // Invio il counter come SECONDO MESSAGGIO separato
+    await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
 
   } catch (e) {
     console.error(e)
