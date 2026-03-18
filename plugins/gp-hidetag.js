@@ -2,7 +2,7 @@ const handler = async (m, { conn, text, participants }) => {
   try {
     const excluded = '393516908130@s.whatsapp.net';
 
-    // Lista utenti da menzionare
+    // utenti da menzionare (escluso il numero specificato)
     const users = participants
       .map(u => conn.decodeJid(u.id))
       .filter(jid => jid !== excluded);
@@ -12,9 +12,9 @@ const handler = async (m, { conn, text, participants }) => {
     if (m.quoted) {
       const quoted = m.quoted;
 
-      // controlla se il messaggio ha download
+      // scarica media solo se esiste
       let media;
-      if (typeof quoted.download === 'function') {
+      if (quoted.download && typeof quoted.download === 'function') {
         media = await quoted.download();
       }
 
@@ -43,7 +43,7 @@ const handler = async (m, { conn, text, participants }) => {
       return m.reply('❌ *Inserisci un testo o rispondi a un messaggio/media*');
     }
 
-    // invia senza quoted per evitare menzioni indesiderate
+    // invia SENZA quoted per evitare menzioni indesiderate
     await conn.sendMessage(m.chat, content, {
       contextInfo: { mentionedJid: users }
     });
