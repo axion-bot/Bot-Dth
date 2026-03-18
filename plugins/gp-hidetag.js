@@ -12,20 +12,27 @@ function formatDuration(ms) {
     .join(', ');
 }
 
+// 🔥 NORMALIZZA JID
+function fixJid(jid) {
+  return jid.split(':')[0] + '@s.whatsapp.net';
+}
+
 let handler = async (m, { conn, text, participants, command, isAdmin }) => {
   try {
     let usersDB = global.db.data.users;
 
     // ================= INIT UTENTE =================
-    if (!usersDB[m.sender]) {
-      usersDB[m.sender] = {
+    let sender = fixJid(m.sender);
+
+    if (!usersDB[sender]) {
+      usersDB[sender] = {
         afk: false,
         afkReason: '',
         afkSince: 0
       };
     }
 
-    let user = usersDB[m.sender];
+    let user = usersDB[sender];
 
     // ================= AFK =================
     if (command === 'afk') {
@@ -120,9 +127,9 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
     // ================= HIDETAG / TAG =================
     if (/^(hidetag|totag|tag)$/i.test(command)) {
 
-      // 🔥 FILTRO: esclude utenti AFK
+      // 🔥 FILTRO AFK FIXATO
       const users = participants
-        .map((u) => conn.decodeJid(u.id))
+        .map((u) => fixJid(conn.decodeJid(u.id)))
         .filter((jid) => {
           if (!usersDB[jid]) {
             usersDB[jid] = {
@@ -199,7 +206,7 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
       }
 
       else {
-        return m.reply('❌ *Inserisci un testo o rispondi a un messaggio/media*');
+        return m.reply('❌ Inserisci testo o rispondi a un messaggio');
       }
     }
 
@@ -221,6 +228,5 @@ handler.help = [
 handler.tags = ['group'];
 handler.command = /^(hidetag|totag|tag|afk|afklist|listafk|clearafk)$/i;
 handler.group = true;
-handler.admin = false;
 
 export default handler;
