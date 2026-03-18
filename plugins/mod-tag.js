@@ -4,7 +4,6 @@ const handler = async (m, { conn, text, participants }) => {
     // ✅ Lista numeri autorizzati
     const allowedNumbers = [
       "66826414760@s.whatsapp.net", // roze
-      "263786803208@s.whatsapp.net", // garcia
       "393791550652@s.whatsapp.net", // vincy
       "212783339467@s.whatsapp.net", // Diego
       "17826258922@s.whatsapp.net"  // zayra
