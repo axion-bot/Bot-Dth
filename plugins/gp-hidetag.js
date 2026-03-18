@@ -40,7 +40,6 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
         user.afk = false;
         user.afkReason = '';
         user.afkSince = 0;
-
         return conn.reply(m.chat, '✅ Sei tornato attivo! Bentornato 👋', m);
       }
 
@@ -95,11 +94,7 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
     // ================= CLEAR AFK =================
     if (command === 'clearafk') {
       if (!isAdmin) {
-        return conn.reply(
-          m.chat,
-          '⚠️ Solo gli admin possono usare questo comando.',
-          m
-        );
+        return conn.reply(m.chat, '⚠️ Solo admin.', m);
       }
 
       let cleared = 0;
@@ -113,33 +108,43 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
         }
       }
 
-      if (!cleared) {
-        return conn.reply(m.chat, 'ℹ️ Nessun AFK da rimuovere.', m);
-      }
-
       return conn.reply(
         m.chat,
-        `✅ Rimossi *${cleared}* utenti AFK.`,
+        cleared ? `✅ Rimossi ${cleared} AFK` : 'ℹ️ Nessun AFK',
         m
       );
     }
 
-    // ================= HIDETAG / TAG =================
+    // ================= TAG / HIDETAG =================
     if (/^(hidetag|totag|tag)$/i.test(command)) {
 
-      // 🔥 FILTRO AFK FIXATO
+      let afkCount = 0;
+
       const users = participants
-        .map((u) => fixJid(conn.decodeJid(u.id)))
-        .filter((jid) => {
-          if (!usersDB[jid]) {
-            usersDB[jid] = {
+        .map((u) => {
+          let original = conn.decodeJid(u.id); // per tag
+          let fixed = fixJid(original); // per DB
+
+          if (!usersDB[fixed]) {
+            usersDB[fixed] = {
               afk: false,
               afkReason: '',
               afkSince: 0
             };
           }
-          return !usersDB[jid].afk;
-        });
+
+          if (usersDB[fixed].afk) {
+            afkCount++;
+            return null;
+          }
+
+          return original;
+        })
+        .filter(Boolean);
+
+      let extraText = afkCount > 0
+        ? `\n\n🚫 ${afkCount} utenti AFK non taggati`
+        : '';
 
       if (m.quoted) {
         const quoted = m.quoted;
@@ -148,7 +153,7 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
           const media = await quoted.download();
           return conn.sendMessage(m.chat, {
             image: media,
-            caption: text || quoted.text || '',
+            caption: (text || quoted.text || '') + extraText,
             mentions: users
           }, { quoted: m });
         }
@@ -157,7 +162,7 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
           const media = await quoted.download();
           return conn.sendMessage(m.chat, {
             video: media,
-            caption: text || quoted.text || '',
+            caption: (text || quoted.text || '') + extraText,
             mentions: users
           }, { quoted: m });
         }
@@ -177,7 +182,7 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
             document: media,
             mimetype: quoted.mimetype,
             fileName: quoted.fileName,
-            caption: text || quoted.text || '',
+            caption: (text || quoted.text || '') + extraText,
             mentions: users
           }, { quoted: m });
         }
@@ -192,7 +197,7 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
 
         else {
           return conn.sendMessage(m.chat, {
-            text: quoted.text || text || '',
+            text: (quoted.text || text || '') + extraText,
             mentions: users
           }, { quoted: m });
         }
@@ -200,7 +205,7 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
 
       else if (text) {
         return conn.sendMessage(m.chat, {
-          text: text,
+          text: text + extraText,
           mentions: users
         }, { quoted: m });
       }
@@ -211,16 +216,16 @@ let handler = async (m, { conn, text, participants, command, isAdmin }) => {
     }
 
   } catch (e) {
-    console.error('Errore plugin:', e);
-    m.reply('❌ Si è verificato un errore');
+    console.error(e);
+    m.reply('❌ Errore');
   }
 };
 
 // ================= CONFIG =================
 handler.help = [
-  'hidetag',
   'tag',
-  'afk [motivo]',
+  'hidetag',
+  'afk',
   'afklist',
   'clearafk'
 ];
