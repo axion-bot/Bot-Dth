@@ -1,107 +1,226 @@
-const BLOCKED_JIDS = [
-  '972537139570@s.whatsapp.net', // nico
-  '393715341918@s.whatsapp.net', // cicco
-  '212726625298@s.whatsapp.net', // vespa
-  '393516908130@s.whatsapp.net', // ankush
-  '393757879627@s.whatsapp.net'  // edo
-]
-
-function toJid(input) {
-  if (!input) return null
-  input = input.toString().trim().toLowerCase()
-
-  if (input.startsWith('@')) input = input.slice(1)
-  if (input.endsWith('@s.whatsapp.net')) return input
-
-  const num = input.replace(/\D/g, '')
-  return num.length >= 10 ? `${num}@s.whatsapp.net` : null
+// ================= FORMAT DURATA =================
+function formatDuration(ms) {
+  if (ms < 0) ms = -ms;
+  const time = {
+    giorni: Math.floor(ms / 86400000),
+    ore: Math.floor(ms / 3600000) % 24,
+    minuti: Math.floor(ms / 60000) % 60,
+  };
+  return Object.entries(time)
+    .filter(([_, val]) => val !== 0)
+    .map(([key, val]) => `${val} ${key}`)
+    .join(', ');
 }
 
-function extractTargets(m, mentionedJid) {
-  let targets = []
-
-  if (mentionedJid?.length) {
-    targets.push(...mentionedJid)
-  }
-
-  if (m.quoted?.sender) {
-    targets.push(m.quoted.sender)
-  }
-
-  if (m.message?.extendedTextMessage?.contextInfo?.mentionedJid) {
-    targets.push(...m.message.extendedTextMessage.contextInfo.mentionedJid)
-  }
-
-  return [...new Set(targets.map(toJid).filter(Boolean))]
-}
-
-const handler = async (m, { conn, text, participants }) => {
+let handler = async (m, { conn, text, participants, command, isAdmin }) => {
   try {
-    const usersToTag = []
-    let blockedCount = 0
+    let usersDB = global.db.data.users;
 
-    for (let p of participants) {
-      let jid = typeof p === 'string' ? p : p.id
-      if (!jid) continue
-
-      let baseJid = toJid(jid.split(':')[0])
-      
-      if (BLOCKED_JIDS.includes(baseJid)) {
-        blockedCount++
-      } else {
-        usersToTag.push(jid) 
-      }
+    // ================= INIT UTENTE =================
+    if (!usersDB[m.sender]) {
+      usersDB[m.sender] = {
+        afk: false,
+        afkReason: '',
+        afkSince: 0
+      };
     }
 
-    let mainText = text || (m.quoted && (m.quoted.text || m.quoted.caption)) || '📢 Tag Generale'
-    
-    const avvisoEsclusi = `⚠️ _${blockedCount} persone non sono state taggate._`
+    let user = usersDB[m.sender];
 
-    if (m.quoted && m.quoted.mtype) {
-      const q = m.quoted
-      if (/image|video|audio|document|sticker/.test(q.mtype)) {
-        const media = await q.download()
-        const type = q.mtype.replace('Message', '')
+    // ================= AFK =================
+    if (command === 'afk') {
+      if (user.afk) {
+        user.afk = false;
+        user.afkReason = '';
+        user.afkSince = 0;
 
-        let options = {
-          [type]: media,
-          mentions: usersToTag,
-          mimetype: q.mimetype,
-          fileName: q.fileName || 'file'
-        }
-
-        if (type !== 'audio' && type !== 'sticker') {
-          options.caption = mainText
-        }
-
-        await conn.sendMessage(m.chat, options, { quoted: m })
-
-        if (blockedCount > 0) {
-          await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
-        }
-        return
+        return conn.reply(m.chat, '✅ Sei tornato attivo! Bentornato 👋', m);
       }
+
+      user.afk = true;
+      user.afkReason = text ? text.trim() : 'Nessun motivo';
+      user.afkSince = Date.now();
+
+      return conn.reply(
+        m.chat,
+        `💤 Sei ora AFK\n📝 Motivo: ${user.afkReason}`,
+        m
+      );
     }
 
-    await conn.sendMessage(m.chat, { 
-      text: mainText, 
-      mentions: usersToTag 
-    }, { quoted: m })
+    // ================= AFK LIST =================
+    if (command === 'afklist' || command === 'listafk') {
+      let afkUsers = [];
 
-    if (blockedCount > 0) {
-      await conn.sendMessage(m.chat, { text: avvisoEsclusi }, { quoted: m })
+      for (let jid in usersDB) {
+        if (usersDB[jid].afk) {
+          afkUsers.push({
+            id: jid,
+            reason: usersDB[jid].afkReason,
+            since: usersDB[jid].afkSince
+          });
+        }
+      }
+
+      if (!afkUsers.length) {
+        return conn.reply(m.chat, 'ℹ️ Nessun utente AFK.', m);
+      }
+
+      let teks = '👥 *Lista utenti AFK*\n\n';
+      let mentions = [];
+
+      for (let u of afkUsers) {
+        let dur = formatDuration(Date.now() - u.since);
+
+        teks += `• @${u.id.split('@')[0]}\n`;
+        teks += `   📝 Motivo: ${u.reason}\n`;
+        teks += `   ⏰ Da: ${dur}\n\n`;
+
+        mentions.push(u.id);
+      }
+
+      return conn.sendMessage(m.chat, {
+        text: teks.trim(),
+        mentions
+      }, { quoted: m });
+    }
+
+    // ================= CLEAR AFK =================
+    if (command === 'clearafk') {
+      if (!isAdmin) {
+        return conn.reply(
+          m.chat,
+          '⚠️ Solo gli admin possono usare questo comando.',
+          m
+        );
+      }
+
+      let cleared = 0;
+
+      for (let jid in usersDB) {
+        if (usersDB[jid].afk) {
+          usersDB[jid].afk = false;
+          usersDB[jid].afkReason = '';
+          usersDB[jid].afkSince = 0;
+          cleared++;
+        }
+      }
+
+      if (!cleared) {
+        return conn.reply(m.chat, 'ℹ️ Nessun AFK da rimuovere.', m);
+      }
+
+      return conn.reply(
+        m.chat,
+        `✅ Rimossi *${cleared}* utenti AFK.`,
+        m
+      );
+    }
+
+    // ================= HIDETAG / TAG =================
+    if (/^(hidetag|totag|tag)$/i.test(command)) {
+
+      // 🔥 FILTRO: esclude utenti AFK
+      const users = participants
+        .map((u) => conn.decodeJid(u.id))
+        .filter((jid) => {
+          if (!usersDB[jid]) {
+            usersDB[jid] = {
+              afk: false,
+              afkReason: '',
+              afkSince: 0
+            };
+          }
+          return !usersDB[jid].afk;
+        });
+
+      if (m.quoted) {
+        const quoted = m.quoted;
+
+        if (quoted.mtype === 'imageMessage') {
+          const media = await quoted.download();
+          return conn.sendMessage(m.chat, {
+            image: media,
+            caption: text || quoted.text || '',
+            mentions: users
+          }, { quoted: m });
+        }
+
+        else if (quoted.mtype === 'videoMessage') {
+          const media = await quoted.download();
+          return conn.sendMessage(m.chat, {
+            video: media,
+            caption: text || quoted.text || '',
+            mentions: users
+          }, { quoted: m });
+        }
+
+        else if (quoted.mtype === 'audioMessage') {
+          const media = await quoted.download();
+          return conn.sendMessage(m.chat, {
+            audio: media,
+            mimetype: 'audio/mp4',
+            mentions: users
+          }, { quoted: m });
+        }
+
+        else if (quoted.mtype === 'documentMessage') {
+          const media = await quoted.download();
+          return conn.sendMessage(m.chat, {
+            document: media,
+            mimetype: quoted.mimetype,
+            fileName: quoted.fileName,
+            caption: text || quoted.text || '',
+            mentions: users
+          }, { quoted: m });
+        }
+
+        else if (quoted.mtype === 'stickerMessage') {
+          const media = await quoted.download();
+          return conn.sendMessage(m.chat, {
+            sticker: media,
+            mentions: users
+          }, { quoted: m });
+        }
+
+        else {
+          return conn.sendMessage(m.chat, {
+            text: quoted.text || text || '',
+            mentions: users
+          }, { quoted: m });
+        }
+      }
+
+      else if (text) {
+        return conn.sendMessage(m.chat, {
+          text: text,
+          mentions: users
+        }, { quoted: m });
+      }
+
+      else {
+        return m.reply('❌ *Inserisci un testo o rispondi a un messaggio/media*');
+      }
     }
 
   } catch (e) {
-    console.error(e)
-    m.reply('❌ Errore durante il tag: ' + e.message)
+    console.error('Errore plugin:', e);
+    m.reply('❌ Si è verificato un errore');
   }
-}
+};
 
-handler.help = ['tag']
-handler.tags = ['group']
-handler.command = /^tag$/i
-handler.group = true
-handler.admin = true
+// ================= CONFIG =================
+handler.help = [
+  'hidetag',
+  'tag',
+  'afk [motivo]',
+  'afklist',
+  'clearafk'
+];
 
-export default handler
+handler.tags = ['group'];
+handler.command = /^(hidetag|totag|tag|afk|afklist|listafk|clearafk)$/i;
+handler.group = true;
+handler.admin = false;
+
+export default handler;
