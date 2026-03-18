@@ -100,6 +100,6 @@ ${err.message}
 handler.help = ['aggiorna']
 handler.tags = ['creatore']
 handler.command = ['aggiorna', 'update', 'aggiornabot']
-handler.rowner = true
+handler.owner = true
 
 export default handler
