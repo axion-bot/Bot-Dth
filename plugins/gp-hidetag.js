@@ -1,56 +1,69 @@
-const handler = async (m, { conn, text, participants }) => {
+const handler = async (m, { conn, text, participants, command }) => {
   try {
-    const excluded = '393516908130@s.whatsapp.net';
-
-    // utenti da menzionare (escluso il numero specificato)
-    const users = participants
-      .map(u => conn.decodeJid(u.id))
-      .filter(jid => jid !== excluded);
-
-    let content = {};
-
+    const users = participants.map((u) => conn.decodeJid(u.id));
     if (m.quoted) {
       const quoted = m.quoted;
-
-      // scarica media solo se esiste
-      let media;
-      if (quoted.download && typeof quoted.download === 'function') {
-        media = await quoted.download();
+      if (quoted.mtype === 'imageMessage') {
+        const media = await quoted.download();
+        await conn.sendMessage(m.chat, {
+          image: media,
+          caption: text || quoted.text || '',
+          mentions: users
+        }, { quoted: m });
       }
-
-      switch (quoted.mtype) {
-        case 'imageMessage':
-          content = { image: media, caption: text || quoted.text || '' };
-          break;
-        case 'videoMessage':
-          content = { video: media, caption: text || quoted.text || '' };
-          break;
-        case 'audioMessage':
-          content = { audio: media, mimetype: 'audio/mp4' };
-          break;
-        case 'documentMessage':
-          content = { document: media, mimetype: quoted.mimetype, fileName: quoted.fileName, caption: text || quoted.text || '' };
-          break;
-        case 'stickerMessage':
-          content = { sticker: media };
-          break;
-        default:
-          content = { text: quoted.text || text || '' };
+      else if (quoted.mtype === 'videoMessage') {
+        const media = await quoted.download();
+        await conn.sendMessage(m.chat, {
+          video: media,
+          caption: text || quoted.text || '',
+          mentions: users
+        }, { quoted: m });
       }
-    } else if (text) {
-      content = { text };
-    } else {
+      else if (quoted.mtype === 'audioMessage') {
+        const media = await quoted.download();
+        await conn.sendMessage(m.chat, {
+          audio: media,
+          mimetype: 'audio/mp4',
+          mentions: users
+        }, { quoted: m });
+      }
+      else if (quoted.mtype === 'documentMessage') {
+        const media = await quoted.download();
+        await conn.sendMessage(m.chat, {
+          document: media,
+          mimetype: quoted.mimetype,
+          fileName: quoted.fileName,
+          caption: text || quoted.text || '',
+          mentions: users
+        }, { quoted: m });
+      }
+      else if (quoted.mtype === 'stickerMessage') {
+        const media = await quoted.download();
+        await conn.sendMessage(m.chat, {
+          sticker: media,
+          mentions: users
+        }, { quoted: m });
+      }
+      else {
+        await conn.sendMessage(m.chat, {
+          text: quoted.text || text || '',
+          mentions: users
+        }, { quoted: m });
+      }
+    }
+    else if (text) {
+      await conn.sendMessage(m.chat, {
+        text: text,
+        mentions: users
+      }, { quoted: m });
+    }
+    else {
       return m.reply('❌ *Inserisci un testo o rispondi a un messaggio/media*');
     }
 
-    // invia SENZA quoted per evitare menzioni indesiderate
-    await conn.sendMessage(m.chat, content, {
-      contextInfo: { mentionedJid: users }
-    });
-
   } catch (e) {
-    console.error('Errore hidetag:', e);
-    m.reply('❌ Si è verificato un errore durante l’invio');
+    console.error('Errore tag/hidetag:', e);
+    m.reply(`${global.errore || '❌ Si è verificato un errore'}`);
   }
 };
 
