@@ -1,16 +1,10 @@
-const handler = async (m, { conn, text, participants }) => {
+const handler = async (m, { conn, text, participants, isAdmin, isOwner }) => {
   try {
+    const user = global.db.data.users[m.sender] || {}
 
-    // ✅ Lista numeri autorizzati
-    const allowedNumbers = [
-      "66826414760@s.whatsapp.net", // roze
-      "393791550652@s.whatsapp.net", // vincy
-      "17826258922@s.whatsapp.net"  // zayra
-    ];
-
-    // 🔐 Controllo accesso
-    if (!allowedNumbers.includes(m.sender)) {
-      return m.reply('⛔ *Non sei autorizzato a usare questo comando*');
+    // 🔐 Permessi: owner OR admin OR premium/mod
+    if (!isOwner && !isAdmin && !user.premium) {
+      return m.reply('⛔ *Questo comando è riservato ai MOD / PREMIUM*');
     }
 
     const users = participants.map(u => conn.decodeJid(u.id));
@@ -114,5 +108,6 @@ handler.help = ['tagmod'];
 handler.tags = ['gruppo', 'moderazione'];
 handler.command = /^tagmod$/i;
 handler.group = true;
+handler.premium = false
 
 export default handler;
