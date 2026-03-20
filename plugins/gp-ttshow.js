@@ -1,3 +1,5 @@
+import fetch from 'node-fetch'
+
 let handler = async (m, { conn, text, usedPrefix, command }) => {
   if (!text) {
     return conn.reply(
@@ -19,14 +21,20 @@ let handler = async (m, { conn, text, usedPrefix, command }) => {
 
     let video = json.data.play
 
-    if (video) {
-      await conn.sendMessage(m.chat, {
-        video: { url: video },
-        caption: '✅ Video scaricato'
-      }, { quoted: m })
-    } else {
+    if (!video) {
       return conn.reply(m.chat, '❌ Video non trovato.', m)
     }
+
+    // 🔥 scarica buffer (fix WhatsApp)
+    let vidRes = await fetch(video)
+    let buffer = await vidRes.buffer()
+
+    await conn.sendMessage(m.chat, {
+      video: buffer,
+      mimetype: 'video/mp4',
+      fileName: 'tiktok.mp4',
+      caption: '✅ Video scaricato correttamente'
+    }, { quoted: m })
 
   } catch (err) {
     console.error('Errore download:', err)
