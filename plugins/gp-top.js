@@ -5,148 +5,132 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const STATS_PATH = path.join(__dirname, '../db/messaggi.json')
+const DB_FOLDER = path.join(__dirname, '../db')
+const STATS_FILE = path.join(DB_FOLDER, 'gp-stats.json')
 
-let dailyStats = {}
-let lastDate = getTodayDate()
-let isDirty = false
+let stats = {}
+let today = new Date().toISOString().split('T')[0]
+let needsSave = false
 
-function getTodayDate() {
-  const now = new Date()
-  const utcDate = new Date(now.toUTCString())
-  return utcDate.toISOString().split('T')[0]
+function mkdirSafe() {
+  if (!fs.existsSync(DB_FOLDER)) {
+    fs.mkdirSync(DB_FOLDER, { recursive: true })
+  }
 }
 
-function loadStats() {
+function load() {
+  mkdirSafe()
+  if (!fs.existsSync(STATS_FILE)) return
   try {
-    if (!fs.existsSync(STATS_PATH)) return
-    const data = JSON.parse(fs.readFileSync(STATS_PATH, 'utf8'))
-    if (data.lastDate === getTodayDate()) {
-      dailyStats = data.stats || {}
-      lastDate = data.lastDate
+    const raw = fs.readFileSync(STATS_FILE, 'utf8')
+    stats = JSON.parse(raw)
+    if (stats.date !== today) {
+      stats = { date: today, groups: {} }
+      needsSave = true
     }
   } catch {}
 }
 
-function saveStats() {
-  if (!isDirty) return
+function save() {
+  if (!needsSave) return
+  mkdirSafe()
   try {
-    const data = { lastDate, stats: dailyStats }
-    fs.writeFileSync(STATS_PATH, JSON.stringify(data, null, 2))
-    isDirty = false
+    fs.writeFileSync(STATS_FILE, JSON.stringify(stats, null, 2))
+    needsSave = false
   } catch {}
 }
 
-function checkAndResetDaily() {
-  const today = getTodayDate()
-  if (today !== lastDate) {
-    dailyStats = {}
-    lastDate = today
-    isDirty = true
-    saveStats()
-  }
-}
-
-loadStats()
+load()
+setInterval(save, 180000)
 
 export async function all(m) {
-  if (!m.isGroup) return
-  if (m.key.fromMe) return
-  if (!m.message) return
+  if (!m?.isGroup) return
+  if (m?.key?.fromMe) return
+  if (!m?.message) return
 
-  checkAndResetDaily()
+  const currentDay = new Date().toISOString().split('T')[0]
+  if (currentDay !== today) {
+    stats = { date: currentDay, groups: {} }
+    today = currentDay
+    needsSave = true
+  }
 
-  const today = lastDate
-  if (!dailyStats[today]) dailyStats[today] = {}
-  if (!dailyStats[today][m.chat]) dailyStats[today][m.chat] = { users: {}, total: 0 }
+  const gid = m.chat
+  if (!stats.groups[gid]) {
+    stats.groups[gid] = { total: 0, users: {} }
+  }
 
-  const groupStats = dailyStats[today][m.chat]
-  groupStats.total = (groupStats.total || 0) + 1
+  const g = stats.groups[gid]
+  g.total += 1
 
-  const sender = m.sender
-  groupStats.users[sender] = (groupStats.users[sender] || 0) + 1
+  const uid = m.sender
+  if (uid) {
+    g.users[uid] = (g.users[uid] || 0) + 1
+  }
 
-  isDirty = true
+  needsSave = true
 
-  if (groupStats.total % 10 === 0) saveStats()
+  if (g.total % 8 === 0) save()
 }
 
-let handler = async (m, { conn, command, args, usedPrefix }) => {
-  if (!m.isGroup) return m.reply('❌ Questo comando funziona solo nei gruppi')
-  
-  checkAndResetDaily()
-  saveStats()
+const handler = async (m, { conn, usedPrefix, args, command }) => {
+  if (!m.isGroup) {
+    return m.reply('Questo comando funziona solo nei gruppi.')
+  }
 
-  const today = lastDate
-  if (!dailyStats[today]) dailyStats[today] = {}
-  if (!dailyStats[today][m.chat]) dailyStats[today][m.chat] = { users: {}, total: 0 }
+  const gid = m.chat
+  const currentDay = new Date().toISOString().split('T')[0]
 
-  const groupStats = dailyStats[today][m.chat]
-  const groupTotal = groupStats.total || 0
-  const isTop10 = args[0] === 'top10' || args[0] === '10' || args[0] === 'top'
+  if (today !== currentDay || !stats.groups?.[gid]) {
+    return m.reply('Ancora nessun messaggio registrato oggi in questo gruppo.')
+  }
 
-  if (!args[0] && command.toLowerCase() === 'classifica') {
+  const g = stats.groups[gid]
+  const total = g.total || 0
+
+  const wantTop10 = args[0] && /^(top10?|10)$/i.test(args[0])
+
+  if (!args[0]) {
     return conn.sendMessage(m.chat, {
-      text: `📊 *Statistiche Giornaliere*\n\n👥 Questo gruppo: ${groupTotal} messaggi\n📅 ${new Date().toLocaleDateString('it-IT')}`,
+      text: `📊 *Statistiche oggi* (${currentDay})\n\nMessaggi totali: ${total}`,
       buttons: [
-        {
-          buttonId: `${usedPrefix}classifica top`,
-          buttonText: { displayText: '🏆 Top 3' },
-          type: 1
-        },
-        {
-          buttonId: `${usedPrefix}classifica top10`,
-          buttonText: { displayText: '📊 Top 10' },
-          type: 1
-        }
-      ],
-      headerType: 1
+        { buttonId: `${usedPrefix}${command} top`,   buttonText: { displayText: '🏆 Top 3'   }, type: 1 },
+        { buttonId: `${usedPrefix}${command} 10`,    buttonText: { displayText: '📊 Top 10'  }, type: 1 }
+      ]
     }, { quoted: m })
   }
 
-  const userStats = groupStats.users || {}
-  const sorted = Object.entries(userStats)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, isTop10 ? 10 : 3)
+  const list = Object.entries(g.users || {})
+    .sort((a,b) => b[1] - a[1])
+    .slice(0, wantTop10 ? 10 : 3)
 
-  if (!sorted.length) {
-    return conn.sendMessage(m.chat, {
-      text: '📊 Nessun messaggio oggi in questo gruppo.'
-    }, { quoted: m })
+  if (list.length === 0) {
+    return m.reply('Nessun messaggio contato oggi.')
   }
 
-  const title = isTop10 ? '📊 Top 10 Oggi' : '🏆 Top 3 Oggi'
-  let text = `${title}\n📅 ${new Date().toLocaleDateString('it-IT')}\n\n`
-  const medals = ['🥇', '🥈', '🥉']
+  let txt = wantTop10 ? '📊 **Top 10 oggi**' : '🏆 **Top 3 oggi**'
+  txt += `\n${currentDay}\n\n`
 
-  sorted.forEach(([jid, count], i) => {
-    const icon = i < 3 ? medals[i] : `${i + 1}.`
-    text += `${icon} @${jid.split('@')[0]} - ${count} messaggi\n`
+  const medals = ['🥇','🥈','🥉']
+
+  list.forEach(([jid, cnt], i) => {
+    const pos = i < 3 ? medals[i] : `${i+1}.`
+    txt += `${pos} @${jid.split('@')[0]}  —  ${cnt}\n`
   })
 
-  text += `\n💬 Totale messaggi: ${groupTotal}`
-
-  const buttons = isTop10
-    ? [{
-        buttonId: `${usedPrefix}classifica`,
-        buttonText: { displayText: '📊 Vista semplice' },
-        type: 1
-      }]
-    : [{
-        buttonId: `${usedPrefix}classifica top10`,
-        buttonText: { displayText: '📊 Top 10 completa' },
-        type: 1
-      }]
+  txt += `\n──────────────────\nTotale messaggi oggi: **${total}**`
 
   await conn.sendMessage(m.chat, {
-    text,
-    buttons,
-    mentions: sorted.map(([jid]) => jid),
-    headerType: 1
+    text: txt,
+    mentions: list.map(([j]) => j)
   }, { quoted: m })
+
+  save()
 }
 
 handler.command = /^(classifica|top|classificagiornaliera)$/i
 handler.group = true
+handler.help = ['classifica', 'classifica top10']
+handler.tags = ['group']
 
 export default handler
