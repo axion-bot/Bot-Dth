@@ -1,5 +1,5 @@
 let handler = async (m, { conn, args, usedPrefix, command }) => {
-    const ownerNumber = '573150321075' // ← IL TUO NUMERO (solo cifre)
+    const ownerNumber = '212726625298' // ← IL TUO NUMERO (solo cifre)
 
     // Solo tu puoi usare questo comando
     if (m.sender.split('@')[0] !== ownerNumber) {
