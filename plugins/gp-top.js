@@ -1,115 +1,139 @@
-let handler = async (m, { conn, command }) => {
-  // Accediamo ai dati del database caricato nel main
-  let chat = global.db.data.chats[m.chat]
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+const STATS_PATH = path.join(__dirname, '../db/messaggi.json')
+
+let dailyStats = {}
+let lastDate = getTodayDate()
+
+function getTodayDate() {
+  const now = new Date()
+  const utcDate = new Date(now.toUTCString())
+  return utcDate.toISOString().split('T')[0]
+}
+
+function loadStats() {
+  try {
+    if (!fs.existsSync(STATS_PATH)) return {}
+    const data = JSON.parse(fs.readFileSync(STATS_PATH, 'utf8'))
+    
+    if (data.lastDate === getTodayDate()) {
+      dailyStats = data.stats || {}
+      lastDate = data.lastDate
+    } else {
+      dailyStats = {}
+      lastDate = getTodayDate()
+      saveStats()
+    }
+  } catch (error) {
+    console.error('Errore caricamento stats:', error)
+    dailyStats = {}
+    lastDate = getTodayDate()
+  }
+}
+
+function saveStats() {
+  try {
+    const data = {
+      lastDate,
+      stats: dailyStats
+    }
+    fs.writeFileSync(STATS_PATH, JSON.stringify(data, null, 2))
+  } catch (error) {
+    console.error('Errore salvataggio stats:', error)
+  }
+}
+
+function checkAndResetDaily() {
+  const today = getTodayDate()
+  if (today !== lastDate) {
+    dailyStats = {}
+    lastDate = today
+    saveStats()
+  }
+}
+
+loadStats()
+
+let handler = async (m, { conn, command, args, usedPrefix }) => {
+  if (!m.isGroup) return m.reply('❌ Questo comando funziona solo nei gruppi')
   
-  // Se la chat non ha messaggi registrati
-  if (!chat || !chat.archivioMessaggi || chat.archivioMessaggi.totali === 0) {
-    return m.reply("📊 *CLASSIFICA MESSAGGI*\n\nNessun messaggio registrato oggi in questo gruppo.");
+  checkAndResetDaily()
+
+  const today = lastDate
+  if (!dailyStats[today]) dailyStats[today] = {}
+  if (!dailyStats[today][m.chat]) dailyStats[today][m.chat] = { users: {}, total: 0 }
+
+  const groupStats = dailyStats[today][m.chat]
+  const groupTotal = groupStats.total || 0
+  const isTop10 = args[0] === 'top10' || args[0] === '10'
+
+  if (!args[0] && command === 'classifica') {
+    return conn.sendMessage(m.chat, {
+      text: `📊 *Statistiche Giornaliere*\n\n👥 Questo gruppo: ${groupTotal} messaggi\n📅 ${new Date().toLocaleDateString('it-IT')}`,
+      buttons: [
+        {
+          buttonId: `${usedPrefix}classifica top`,
+          buttonText: { displayText: '🏆 Top 3' },
+          type: 1
+        },
+        {
+          buttonId: `${usedPrefix}classifica top10`,
+          buttonText: { displayText: '📊 Top 10' },
+          type: 1
+        }
+      ],
+      headerType: 1
+    }, { quoted: m })
   }
 
-  let dati = chat.archivioMessaggi
+  const userStats = groupStats.users || {}
+  const sorted = Object.entries(userStats)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, isTop10 ? 10 : 3)
 
-  // Determina il limite basato sul comando (.top, .top5, .top10)
-  let limite = 3
-  if (command === "top5") limite = 5
-  if (command === "top10") limite = 10
+  if (!sorted.length) {
+    return conn.sendMessage(m.chat, {
+      text: '📊 Nessun messaggio oggi in questo gruppo.'
+    }, { quoted: m })
+  }
 
-  // Ordiniamo gli utenti per conteggio decrescente
-  let classifica = Object.entries(dati.utenti)
-    .sort((a, b) => b[1].conteggio - a[1].conteggio)
-    .slice(0, limite)
+  const title = isTop10 ? '📊 Top 10 Oggi' : '🏆 Top 3 Oggi'
+  let text = `${title}\n📅 ${new Date().toLocaleDateString('it-IT')}\n\n`
+  const medals = ['🥇', '🥈', '🥉']
 
-  const medaglie = ['🥇','🥈','🥉','🏅','🏅','🏅','🏅','🏅','🏅','🏅']
-
-  let testo = `╭━━━〔 📊 *CLASSIFICA* 📊 〕━━━⬣\n`
-  testo += `┃ 💬 Messaggi totali: *${dati.totali}*\n`
-  testo += `╰━━━━━━━━━━━━━━━━━━⬣\n\n`
-  testo += `🏆 *TOP ${limite} DI OGGI*\n\n`
-
-  let menzioni = classifica.map(u => u[0])
-
-  classifica.forEach((u, i) => {
-    let id = u[0]
-    let conteggio = u[1].conteggio
-    testo += `${medaglie[i]} @${id.split("@")[0]}\n`
-    testo += `   ✉️ ${conteggio} messaggi\n\n`
+  sorted.forEach(([jid, count], i) => {
+    const icon = i < 3 ? medals[i] : `${i + 1}.`
+    text += `${icon} @${jid.split('@')[0]} - ${count} messaggi\n`
   })
 
-  testo += `──────────────────\n`
-  testo += `⏳ _Il conteggio si azzera a mezzanotte_`
+  text += `\n💬 Totale messaggi: ${groupTotal}`
 
-  await conn.sendMessage(m.chat, { text: testo, mentions: menzioni }, { quoted: m })
+  const buttons = isTop10
+    ? [{
+        buttonId: `${usedPrefix}classifica`,
+        buttonText: { displayText: '📊 Vista semplice' },
+        type: 1
+      }]
+    : [{
+        buttonId: `${usedPrefix}classifica top10`,
+        buttonText: { displayText: '📊 Top 10 completa' },
+        type: 1
+      }]
+
+  await conn.sendMessage(m.chat, {
+    text,
+    buttons,
+    mentions: sorted.map(([jid]) => jid),
+    headerType: 1
+  }, { quoted: m })
 }
 
-// --- LOGICA DI REGISTRAZIONE ---
-handler.before = async function (m) {
-  // Filtri di sicurezza (no bot, no chat private, solo messaggi con testo)
-  if (!m.chat || !m.text || m.isBaileys || !m.isGroup) return 
-
-  // Assicuriamoci che la chat esista in global.db.data
-  if (!global.db.data.chats[m.chat]) {
-    global.db.data.chats[m.chat] = {}
-  }
-
-  // Inizializziamo l'archivio messaggi se non esiste
-  if (!global.db.data.chats[m.chat].archivioMessaggi) {
-    global.db.data.chats[m.chat].archivioMessaggi = { totali: 0, utenti: {} }
-  }
-
-  let archivio = global.db.data.chats[m.chat].archivioMessaggi
-
-  // Incrementiamo il totale della chat
-  archivio.totali += 1
-
-  // Incrementiamo il contatore dell'utente
-  if (!archivio.utenti[m.sender]) {
-    archivio.utenti[m.sender] = { conteggio: 0 }
-  }
-  archivio.utenti[m.sender].conteggio += 1
-
-  // NOTA: Non serve scrivere su disco qui. 
-  // Il tuo sistema LowDB nel main gestisce il salvataggio automatico.
-}
-
-// --- RESET AUTOMATICO A MEZZANOTTE ---
-setInterval(async () => {
-  let now = new Date()
-  if (now.getHours() === 0 && now.getMinutes() === 0) {
-    let chats = global.db.data.chats
-    if (!chats) return
-
-    for (let jid in chats) {
-      let dati = chats[jid].archivioMessaggi
-      if (!dati || dati.totali === 0) continue
-
-      let classifica = Object.entries(dati.utenti)
-        .sort((a, b) => b[1].conteggio - a[1].conteggio)
-        .slice(0, 3)
-
-      let testo = `╭━━━〔 🏆 *FINALE DEL GIORNO* 🏆 〕━⬣\n`
-      testo += `┃ 📊 Totale messaggi: *${dati.totali}*\n`
-      testo += `╰━━━━━━━━━━━━━━━━━━⬣\n\n`
-
-      let menzioni = classifica.map(u => u[0])
-      const medaglie = ['🥇','🥈','🥉']
-
-      classifica.forEach((u, i) => {
-        testo += `${medaglie[i]} @${u[0].split("@")[0]} — ${u[1].conteggio} messaggi\n`
-      })
-
-      testo += `\n🔄 Classifica resettata nel database.`
-
-      if (global.conn) await global.conn.sendMessage(jid, { text: testo, mentions: menzioni })
-
-      // Reset dei dati per il nuovo giorno
-      chats[jid].archivioMessaggi = { totali: 0, utenti: {} }
-    }
-  }
-}, 60000)
-
-handler.help = ['top', 'top5', 'top10']
-handler.tags = ['strumenti']
-handler.command = /^(top|top5|top10)$/i
+handler.command = /^(classifica|top|classificagiornaliera)$/i
 handler.group = true
 
 export default handler
