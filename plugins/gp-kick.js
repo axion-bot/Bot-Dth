@@ -1,68 +1,29 @@
+import fs from 'fs';
+import fetch from 'node-fetch';
+
 async function handler(m, { isBotAdmin, isOwner, text, conn }) {
-  if (!isBotAdmin) {
-    return await conn.sendMessage(m.chat, {
-      text: 'ⓘ Devo essere admin per poter funzionare'
-    }, { quoted: m })
-  }
+  if (!isBotAdmin) return m.reply('❌ *Devi essere admin*');
 
-  const mention = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : m.quoted
-  if (!mention) {
-    return await conn.sendMessage(m.chat, {
-      text: 'ⓘ Menziona la persona da rimuovere'
-    }, { quoted: m })
-  }
+  const mention = m.mentionedJid[0] || (m.quoted ? m.quoted.sender : null);
+  if (!mention) return m.reply('❌ *Menziona un utente*');
 
-  const ownerBot = global.owner[0][0] + '@s.whatsapp.net'
+  const ownerBot = global.owner[0][0] + '@s.whatsapp.net';
+  if (mention === ownerBot) return m.reply('❌ *Non toccare il creatore*');
+  if (mention === conn.user.jid) return m.reply('❌ *Non posso auto-espellermi*');
+  if (mention === m.sender) return m.reply('❌ *Non puoi espellere te stesso*');
 
-  if (mention === ownerBot) {
-    return await conn.sendMessage(m.chat, {
-      text: 'ⓘ Non puoi rimuovere il creatore del bot'
-    }, { quoted: m })
-  }
+  const groupMetadata = conn.chats[m.chat].metadata;
+  const participants = groupMetadata.participants;
+  const utente = participants.find(u => conn.decodeJid(u.id) === mention);
 
-  if (mention === conn.user.jid) {
-    return await conn.sendMessage(m.chat, {
-      text: 'ⓘ Non puoi rimuovere il bot'
-    }, { quoted: m })
-  }
+  if (utente?.admin === 'superadmin') return m.reply('❌ *Non puoi rimuovere il creatore*');
+  if (utente?.admin === 'admin') return m.reply('❌ *Non puoi rimuovere un admin*');
 
-  if (mention === m.sender) {
-    return await conn.sendMessage(m.chat, {
-      text: 'ⓘ Non puoi rimuovere te stesso'
-    }, { quoted: m })
-  }
-
-  const groupMetadata = conn.chats[m.chat]?.metadata
-  const participants = groupMetadata?.participants || []
-  const utente = participants.find(u => conn.decodeJid(u.id) === mention)
-
-  const owner = utente?.admin === 'superadmin'
-  const admin = utente?.admin === 'admin'
-
-  if (owner) {
-    return await conn.sendMessage(m.chat, {
-      text: "ⓘ L'utente che hai provato a rimuovere 𝐞̀ il creatore del gruppo"
-    }, { quoted: m })
-  }
-
-  if (admin) {
-    return await conn.sendMessage(m.chat, {
-      text: "ⓘ L'utente che hai provato a rimuovere è admin"
-    }, { quoted: m })
-  }
-
-  const reason = text ? `\n\n𝐌𝐨𝐭𝐢𝐯𝐨: ${text.replace(/@\d+/g, '').trim()}` : ''
-
-  await conn.sendMessage(m.chat, {
-    text: `@${mention.split`@`[0]} è stato rimosso da @${m.sender.split`@`[0]}${reason}`,
-    mentions: [mention, m.sender]
-  }, { quoted: m })
-
-  await conn.groupParticipantsUpdate(m.chat, [mention], 'remove')
+  await conn.groupParticipantsUpdate(m.chat, [mention], 'remove');
 }
 
-handler.customPrefix = /kick|avadachedavra|sparisci|pannolini|puffo/i
-handler.command = new RegExp
-handler.admin = true
+handler.customPrefix = /^(kick|avadakedavra|sparisci|puffo)\b/i;
+handler.command = new RegExp;
+handler.admin = true;
 
-export default handler
+export default handler;
