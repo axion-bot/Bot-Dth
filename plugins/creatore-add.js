@@ -1,10 +1,4 @@
-let handler = async (m, { conn, text, isAdmin, isOwner }) => {
-    if (!m.isGroup) return m.reply('❌ Solo nei gruppi')
-    if (!isAdmin && !isOwner) return m.reply('❌ Solo admin')
-    
-    const isBotAdmin = (await conn.groupMetadata(m.chat)).participants.find(v => v.id === conn.user.jid)?.admin || false
-    if (!isBotAdmin) return m.reply('❌ Il bot deve essere admin')
-    
+let handler = async (m, { conn, text }) => {
     if (!text) return m.reply(`📌 Esempio: .add 393471234567`)
 
     let num = text.replace(/[^0-9]/g, '')
